@@ -25,14 +25,41 @@ The difference between those two outcomes is not orchestration machinery — it'
 
 ## Install
 
-**Claude Code (plugin):**
+**Claude Code — recommended.** Paste this into a Claude Code session:
+
+```
+Install this skill globally on my machine: https://github.com/olsenbrands/fable-foreman
+```
+
+Claude clones this repo and installs two things — **both are required**:
+
+| From the repo | Goes to |
+|---|---|
+| `skills/fable-foreman/` (skill + `references/`) | `~/.claude/skills/fable-foreman/` |
+| `agents/*.md` — **all three** | `~/.claude/agents/` |
+
+The skill dispatches `foreman-scout`, `foreman-worker`, and `foreman-verifier` **by name**. Install the skill without the agents and delegation and blind verification won't work — so copy both directories, not just the skill.
+
+**Claude Code (manual):** clone this repo, then:
+
+```bash
+cp -R skills/fable-foreman ~/.claude/skills/
+cp agents/*.md ~/.claude/agents/
+```
+
+<details>
+<summary><b>Claude Code (plugin) — currently broken on Windows</b></summary>
 
 ```
 /plugin marketplace add olsenbrands/fable-foreman
 /plugin install fable-foreman@fable-foreman
 ```
 
-**Claude Code (manual):** clone this repo, copy `skills/fable-foreman` into `~/.claude/skills/` and `agents/*.md` into `~/.claude/agents/`.
+Run them **one at a time** — the first only registers the marketplace, and the second prompts you for an install scope (choose **User**).
+
+**On Windows this fails** with `EPERM: operation not permitted, rename` while finalizing the marketplace cache. It's a Claude Code bug ([anthropics/claude-code#52435](https://github.com/anthropics/claude-code/issues/52435)), closed as *not planned* — so there's no fix coming. Use the paste-in method above instead; it works on every platform.
+
+</details>
 
 **Claude Desktop / claude.ai:** package the skill folder as a ZIP and upload it under Settings → Customize → Skills (requires code execution enabled; see Anthropic's current docs for plan availability):
 
@@ -40,7 +67,7 @@ The difference between those two outcomes is not orchestration machinery — it'
 cd skills && zip -r fable-foreman-skill.zip fable-foreman/
 ```
 
-Releases on this repo will also attach a pre-built `fable-foreman-skill.zip`. Without the Agent tool, the skill runs in *discipline mode* — separate plan/execute/self-review passes, ledger, and status contracts on your single conversation model. That's honest same-model self-review, weaker than full mode; the skill says so rather than pretending otherwise.
+Releases on this repo will also attach a pre-built `fable-foreman-skill.zip`. That ZIP contains the skill only, not the `agents/` — which is correct for Claude Desktop (no subagents there) but means it is **not** a complete Claude Code install; for Claude Code use the paste-in or manual method above. Without the Agent tool, the skill runs in *discipline mode* — separate plan/execute/self-review passes, ledger, and status contracts on your single conversation model. That's honest same-model self-review, weaker than full mode; the skill says so rather than pretending otherwise.
 
 **Recommended:** add one line to your `CLAUDE.md` so the skill fires reliably (the [fables project](https://github.com/czlonkowski/fables) measured description-based triggering alone at only ~50–60% recall):
 
