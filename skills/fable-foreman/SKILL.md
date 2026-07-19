@@ -1,14 +1,17 @@
 ---
 name: fable-foreman
 description: >-
-  Team-lead orchestrator: the strongest Claude model plans, routes, and
-  verifies while cheaper Claude or Codex workers execute. Use for: orchestrate,
-  delegate, foreman mode, save tokens, multi-agent.
+  Team-lead orchestrator: whichever frontier-class Claude model leads your
+  session plans, routes, and verifies while cheaper Claude or Codex workers
+  execute. Use for: orchestrate, delegate, foreman mode, save tokens,
+  multi-agent.
 ---
 
 # Fable Foreman
 
 You are the foreman: the lead model on the job site, which is exactly why you should almost never swing the hammer. Your judgment is the expensive part — planning, routing, reviewing. The typing is cheap. Delegate it.
+
+**Any frontier-class model holds this seat identically.** The skill is named for where it started, not for what it requires: Fable, Opus, or whatever tops your account today all run it the same way. Nothing below keys off model *identity* — every rule keys off capability *class*. If you are an Opus session that invoked this skill, or a Fable session that fell back to Opus mid-run, you are the foreman and the decision tree is unchanged.
 
 **Also fire on:** farm this out, team lead mode, use cheaper models, save credits, route tasks to the right model, run agents in parallel, big task on a budget — or unprompted, when a multi-file task would burn premium quota that cheaper workers could handle at equal quality.
 
@@ -16,9 +19,9 @@ You are the foreman: the lead model on the job site, which is exactly why you sh
 
 **Economics chooses among the models that clear the quality bar. It never lowers the bar.** When unsure whether a cheaper tier can do a task well, go one tier up. If budget or rate limits cannot support the tier a task demands, stop and tell the user — never silently ship degraded work.
 
-## Step 0 — Probe the job site (once per session, then cache)
+## Step 0 — Probe the job site (once per session, then cache — re-probe on model change)
 
-1. **Your own model** — you hold the LEAD seat. If it's mid-tier, say so and suggest switching before frontier-judgment work.
+1. **Your own model** — you hold the LEAD seat. Establish its **class**, not its name. Any frontier-class model is a valid foreman; never suggest switching from one frontier model to another. Speak up only when the LEAD seat is genuinely **mid-tier or below**, and only before frontier-judgment work. **This cache expires on model change:** a session can move models mid-run (safety-classifier fallback, quota, org policy, an explicit `/model`), and a foreman still routing off a stale identity will mis-seat its own work. On any sign the LEAD seat changed, re-probe, journal it in the ledger, and continue — a frontier→frontier change alters the ledger line and nothing else.
 2. **Agent tool** — can you spawn subagents?
 3. **Real shell** — does Bash run on the user's machine (not a remote sandbox)?
 4. **Codex CLI** — see [references/codex-workers.md](references/codex-workers.md) for the version-tolerant probe. **Consent rule:** Codex spends a separate account's money (subscription or metered API key). Before the first Codex dispatch, state that Codex is available, which billing mode its login uses, and confirm routing — unless the user already asked for Codex this session.
@@ -38,7 +41,7 @@ In either Discipline mode, the blind-verifier requirement becomes a **disclosed 
 
 | Class | Work it gets | Claude seat | Codex seat |
 |---|---|---|---|
-| **FRONTIER** | Architecture, ambiguous debugging, final judgment | LEAD (verify it's frontier-class first) | Top verified tier |
+| **FRONTIER** | Architecture, ambiguous debugging, final judgment | LEAD, or a frontier-class subagent (`opus` / `fable` alias) | Top verified tier |
 | **WORKHORSE** | Well-specified implementation, tests, refactors | `sonnet` alias | Mid verified tier |
 | **FAST** | Scanning, mechanical edits, extraction | `haiku` alias | Cheapest verified tier |
 

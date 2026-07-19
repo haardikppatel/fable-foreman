@@ -4,9 +4,11 @@
 
 Built in public by [DontSleepOnAI](https://dontsleeponai.com) — the story behind this skill (including the five-round adversarial review where OpenAI's newest model tore apart the first draft) lives there.
 
-Fable Foreman turns the most capable Claude model on your account into a team lead: it plans, routes each task to the cheapest worker that clears the quality bar — Claude subagents or OpenAI Codex CLI workers, auto-detected — and, in full orchestration mode, refuses to accept meaningful changes until a blind, fresh-context verifier reproduces the evidence. (Environments without subagents get an honest reduced-assurance mode that says so.)
+Fable Foreman turns whichever frontier-class Claude model leads your session into a team lead: it plans, routes each task to the cheapest worker that clears the quality bar — Claude subagents or OpenAI Codex CLI workers, auto-detected — and, in full orchestration mode, refuses to accept meaningful changes until a blind, fresh-context verifier reproduces the evidence. (Environments without subagents get an honest reduced-assurance mode that says so.)
 
 No dated model IDs in routing policy. No configuration files. No enforcement scripts. One skill, three agent roles, and a set of rules good enough that a frontier model actually follows them.
+
+**"Fable" is where it started, not what it needs.** The foreman seat is a capability class, so any frontier-class Claude runs the skill identically — Opus leads it exactly as Fable does, with the same routing tree, gates, and verification contract. That holds whether an Opus session invokes the skill directly or a Fable session falls back to Opus mid-run; the skill re-probes its own seat and carries on rather than routing off a stale identity.
 
 ## Why
 
@@ -16,11 +18,11 @@ The difference between those two outcomes is not orchestration machinery — it'
 
 ## What it does
 
-1. **Probes the job site** — what model is the session running, can it spawn agents, is a working Codex CLI present: binary on PATH, then `codex login status` for auth *and billing mode*, with a version-tolerant credential-file fallback if that subcommand ever changes — and no billable call, not even the functional `echo ok`, until you've consented to spending your OpenAI credits.
-2. **Routes by capability class, not model name** — FRONTIER (judgment), WORKHORSE (implementation), FAST (scanning). Classes resolve at runtime to stable aliases and to whatever Codex tiers your account offers today. New model releases require zero skill updates.
+1. **Probes the job site** — what model is the session running, can it spawn agents, is a working Codex CLI present: binary on PATH, then `codex login status` for auth *and billing mode*, with a version-tolerant credential-file fallback if that subcommand ever changes — and no billable call, not even the functional `echo ok`, until you've consented to spending your OpenAI credits. The probe is cached, but **expires when the session model changes** — a fallback, a quota event, or a `/model` switch triggers a re-probe rather than letting the foreman route off an identity it no longer has.
+2. **Routes by capability class, not model name** — FRONTIER (judgment), WORKHORSE (implementation), FAST (scanning). Classes resolve at runtime to stable aliases and to whatever Codex tiers your account offers today. Frontier is a *class*, so any top-tier Claude leads identically, and frontier-class workers are dispatchable when parallel judgment work genuinely needs them. New model releases require zero skill updates.
 3. **Delegates with self-contained tickets** — 7 core sections plus a mandatory write-set fence on implementation work, file paths instead of pasted context, gradeable acceptance criteria.
 4. **Collects four-status reports** — `DONE / DONE_WITH_CONCERNS / NEEDS_CONTEXT / BLOCKED` — with a bounded escalation ladder: two failures at a seat, then escalate one seat or take over. Never a third identical retry.
-5. **Verifies like it trusts no one** — the project's real build/test command first (free), then a blind verifier that gets the original task verbatim and none of the worker's reasoning. Required for every accepted change except single-file zero-logic edits. Cross-family when possible: Claude verifies Codex work and vice versa.
+5. **Verifies like it trusts no one** — the project's real build/test command first (free), then a blind verifier that gets the original task verbatim and none of the worker's reasoning. Required for every accepted change except single-file zero-logic edits. Cross-family when possible: Claude verifies Codex work and vice versa. When the verifier resolves to the same model as the lead, it says so — "blind-verified (same model, independent context)" — instead of implying independence it didn't obtain.
 6. **Respects your budget both directions** — sequential dispatch by default (prompt-cache warmth), announced fan-outs, and the degradation rule: under quota pressure it steps seats down *visibly* and prefers stopping cleanly over silently shipping degraded work. **Economics never lowers the quality bar.**
 
 ## Install
@@ -77,7 +79,7 @@ For any multi-file or multi-stage task, use the fable-foreman skill.
 
 ## What it needs
 
-- **For full orchestration:** Claude Code, any model — the stronger your session model, the more the economics favor delegation. On claude.ai/Desktop the skill still installs and runs in discipline mode.
+- **For full orchestration:** Claude Code, any model — the stronger your session model, the more the economics favor delegation. Any frontier-class Claude leads the same way, so it makes no difference which one your session lands on, and a mid-run switch between them doesn't disturb the run. On claude.ai/Desktop the skill still installs and runs in discipline mode.
 - **Optional:** OpenAI Codex CLI, installed and logged in. If present — and only with your explicit OK, since it spends your OpenAI subscription or API credits — execution can route to Codex tiers, discovered from your account at runtime and chosen per task the same way Claude tiers are. If absent, everything falls back to Claude workers. Nothing breaks.
 
 ## Notes on quotas
