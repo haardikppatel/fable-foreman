@@ -17,8 +17,17 @@ The session model is the **LEAD seat** — it runs you, the foreman. Do not assu
 
 - **WORKHORSE** = the `sonnet` alias; **FAST** = the `haiku` alias. **FRONTIER** is normally the LEAD seat itself, but frontier-class *workers* are dispatchable too — the Agent tool's `model` parameter accepts frontier aliases (`opus`, `fable`) alongside `sonnet` and `haiku`. Aliases track the latest release in each family automatically — new releases require zero skill edits.
 - **When to spend a frontier worker** (the First Law still applies — this is the expensive seat): genuinely independent frontier-judgment workstreams that must run in parallel; a blind verifier for a frontier-class change when no Codex counterpart exists; or a second opinion on a decision the run hinges on. Not for implementation a WORKHORSE clears. An Opus lead dispatching Opus workers is ordinary routing, not an escalation — but it is the priciest crew you can field, so announce it like any other fan-out.
-- Pass the model per dispatch via the Agent tool's `model` parameter (overrides agent-file frontmatter). Treat it as a *request*: runtimes may substitute if the org disallows a tier. If a dispatch behaves far above or below its class, log the seat as "unverified" rather than asserting it.
+- Pass the model per dispatch via the Agent tool's `model` parameter (overrides agent-file frontmatter). Treat it as a *request*: runtimes may substitute if the org disallows a tier. A dispatch behaving far above or below its class is a *trigger to check provenance* (verification.md Layer 0) — behavior is never itself the provenance mechanism, in either direction: anomalous output doesn't prove substitution, and normal-looking output doesn't prove the requested seat served.
+
 - The built-in `Explore` agent inherits the session model — from any frontier LEAD that is an expensive default for background scanning, and when LEAD and `Explore` resolve to the same model you are paying frontier rates to grep. Dispatch `foreman-scout` (FAST) instead.
+
+### The silent-fallback hazard
+
+A routing request the runtime can't honor may be **silently replaced, not rejected** — the dispatch proceeds on a different model with no error surfaced. Documented field case (claudemix, 2026-08): a non-Claude model string passed *inline* in an Agent tool call was silently dropped and the subagent ran on a Claude model, while the same string in the agent file's `model:` frontmatter routed correctly (through their proxy). The hazard generalizes: org policy denials, decommissioned aliases, and unsupported tiers can all land as silent substitutions.
+
+Empirical status in Claude Code (tested 2026-08-07, current build): an agent file pinned to a foreign model **with no proxy present** fails *loudly* ("Agent terminated early due to an API error"), and inline `model` values outside the supported enum are rejected at schema validation — neither path silently substituted in our tests. Treat that as the harness's current behavior, not a guarantee: the substitution class remains real across runtimes, builds, and org policies.
+
+Countermeasures, in order: **(1)** route non-standard models via agent-file frontmatter, never inline strings; **(2)** treat every `model` parameter as a request; **(3)** close the loop with Layer 0 seat provenance (verification.md) — deterministic evidence of the served model, which converts a silent substitution from an invisible routing error into a logged, handleable event.
 
 ## Effort — use the controls that actually exist
 

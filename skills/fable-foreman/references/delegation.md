@@ -92,7 +92,7 @@ Findings from review/verification batch into **one** fix ticket carrying the com
 
 ## Ledger schema
 
-`.foreman/ledger.md`, written before the **first delegated dispatch of any run** — a single-worker run gets the minimal form (BASELINE + one task row + Attempts):
+`.foreman/ledger.md`, written before the **first delegated dispatch of any run** — a single-worker run gets the minimal form (BASELINE + one task row + Attempts). Where a real shell exists, bootstrap it with `scripts/init-ledger.sh "<task title>"` (v0.3): it snapshots the baseline deterministically and refuses to clobber an existing ledger, forcing the resume-reconcile path below.
 
 ```
 # Foreman Ledger — <task title>

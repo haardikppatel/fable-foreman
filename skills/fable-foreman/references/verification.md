@@ -2,6 +2,22 @@
 
 Orchestration's bottleneck isn't coordination — it's validation. This is where the skill spends its rigor.
 
+## Layer 0 — Seat provenance (verify with the log, never the model's self-report)
+
+Routing decisions are only as real as the seat that actually served the request, and runtimes can substitute seats (routing.md). So before a report's *content* is graded, its *provenance* is established — from deterministic evidence only. Evidence comes in tiers, and the tiers are not equal:
+
+- **SERVED evidence** (the real thing): an artifact produced *after* model resolution that names the model that answered — a served-model field in an event stream, a provider-side log correlating the request to the serving model. Only served-tier evidence makes a seat `verified`.
+- **ROUTED evidence** (weaker): an artifact proving which *route* a request took without naming the served model — a proxy log line, an HTTP status from a known upstream. Records that routing behaved; does not verify the seat.
+- **REQUESTED evidence** (weakest): what you asked for — a `-m` flag, an agent-file `model:` line, the harness UI echoing the dispatch parameters. Necessary for the ledger, worthless as proof of what served.
+
+Per surface, honestly stated:
+
+- **Codex dispatches:** current Codex builds do **not** emit a served-model field in `codex exec --json` (verified 2026-08-07 against the CLI's JSONL processor source — the stream's `thread.started` carries only a thread id). The launcher (`scripts/codex-dispatch.sh`) scans for one anyway, version-tolerantly: if a future build emits it, that is served evidence; until then every Codex dispatch is `seat: unverified — requested <model> via -m`, written exactly so in the ledger attempt line. Do not dress requested evidence as served.
+- **Claude subagent dispatches:** harness dispatch metadata generally records the *request* (requested tier). Where the harness surfaces a post-resolution model identity, that is served evidence; where it doesn't, the seat is `unverified` — say so rather than inferring the seat from output quality or the worker's claims.
+- **Never** establish provenance by asking the worker what model it is. A model's self-identification tracks its prompt and system context, not its weights. (Measured nuance, 2026-08-07: Claude Code injects identity into Claude subagents' system prompts, and haiku subagents resisted three priming attempts including a fake proxy-routing notice — self-reports *here* are usually right. The rule stands anyway: "usually right" is not evidence, and the risk concentrates exactly where it matters — foreign models behind proxies, which have no identity anchor at all.)
+
+Consequences of an unverified seat: the work is not discarded, but (a) it cannot count as cross-family verification (below), and (b) FRONTIER-class judgment recorded from it is downgraded to advisory. A **detected substitution** (evidence shows a different seat than routed) is a *transport/routing failure*, not a ticket failure: invalidate the seat mapping, repair the route (or change transport) before re-dispatching, and count a repeated substitution on the same route as a real failure toward the precedence table — never loop free retries into a route that is known to lie.
+
 ## When the verifier is required
 
 In Full, Codex-boosted, Codex-only, and Delegate-only modes: every accepted change, **except** single-file changes with no logic content (pure formatting, comments, docs). In Delegate-only mode the verifier still runs, but deterministic checks nobody could execute remain **UNVERIFIED** until the user supplies their results — a verifier verdict cannot substitute for an unrun check, so acceptance waits on both. In the Discipline modes there is no blind verifier — the disclosed reduced-assurance rule in SKILL.md replaces this section, and acceptances are labeled "self-reviewed, not blind-verified." That's the whole rule. "It seemed straightforward" is not an exemption — straightforward-looking changes are where unreviewed regressions live. If you are tempted to skip the verifier, that impulse is itself a signal the change deserves one.

@@ -6,7 +6,16 @@ Built in public by [DontSleepOnAI](https://dontsleeponai.com) — the story behi
 
 Fable Foreman turns whichever frontier-class Claude model leads your session into a team lead: it plans, routes each task to the cheapest worker that clears the quality bar — Claude subagents or OpenAI Codex CLI workers, auto-detected — and, in full orchestration mode, refuses to accept meaningful changes until a blind, fresh-context verifier reproduces the evidence. (Environments without subagents get an honest reduced-assurance mode that says so.)
 
-No dated model IDs in routing policy. No configuration files. No enforcement scripts. One skill, three agent roles, and a set of rules good enough that a frontier model actually follows them.
+No dated model IDs in routing policy. No configuration files. One skill, four agent roles, three small deterministic scripts, and a set of rules good enough that a frontier model actually follows them.
+
+## What's new in v0.3.0 — trust the log, see the crew
+
+v0.3.0 came out of a head-to-head study against [claudemix](https://github.com/hughminhphan/claudemix), three rounds of adversarial review by OpenAI's frontier Codex model, and a day of live testing. Four things changed, all in plain English:
+
+1. **Codex workers are no longer invisible.** Before, Codex jobs ran as silent shell commands — you couldn't see them, and the foreman sat blocked while they ran. Now each Codex job rides inside a visible subagent you can watch in your harness, the foreman keeps working while it runs, and completion arrives as a notification instead of a polling loop. Measured cost: a few seconds of latency and a few cents of cheap-tier tokens per dispatch; the skill still uses direct calls for sub-minute tasks where that overhead isn't worth it.
+2. **The skill stops guessing which model actually did the work.** Runtimes can silently substitute models, and a worker's claim about its own identity tracks its prompt, not its weights (we tested this). v0.3 grades seat identity by deterministic evidence in three honesty tiers — *served* beats *routed* beats *requested* — and when no real evidence exists (today's Codex CLI emits none), the ledger says `seat: unverified` instead of pretending. No other change in this release matters more for trusting multi-model results.
+3. **Prose became scripts where prose was doing a script's job.** The Step 0 environment probe, the ledger bootstrap, and the Codex launcher are now three small POSIX shell scripts — deterministic, injection-hardened, adversarially reviewed. The launcher validates every argument and tracks the Codex process by PID so nothing runs orphaned; the probe redacts gateway URLs so secrets never land in a ledger. (The launcher's raw JSONL/stderr artifacts are not redacted — they stay on your machine under `.foreman/scratch/`.)
+4. **A setup runbook an agent can execute.** `references/setup-runbook.md` verifies the whole environment step-by-step with evidence — including an optional, consent-gated recipe for running GPT models as *native* Claude Code subagents via a local splitter, with the supply-chain and terms-of-service caveats stated honestly.
 
 **"Fable" is where it started, not what it needs.** The foreman seat is a capability class, so any frontier-class Claude runs the skill identically — Opus leads it exactly as Fable does, with the same routing tree, gates, and verification contract. That holds whether an Opus session invokes the skill directly or a Fable session falls back to Opus mid-run; the skill re-probes its own seat and carries on rather than routing off a stale identity.
 
@@ -37,10 +46,10 @@ Claude clones this repo and installs two things — **both are required**:
 
 | From the repo | Goes to |
 |---|---|
-| `skills/fable-foreman/` (skill + `references/`) | `~/.claude/skills/fable-foreman/` |
-| `agents/*.md` — **all three** | `~/.claude/agents/` |
+| `skills/fable-foreman/` (skill + `references/` + `scripts/`) | `~/.claude/skills/fable-foreman/` |
+| `agents/*.md` — **all four** | `~/.claude/agents/` |
 
-The skill dispatches `foreman-scout`, `foreman-worker`, and `foreman-verifier` **by name**. Install the skill without the agents and delegation and blind verification won't work — so copy both directories, not just the skill.
+The skill dispatches `foreman-scout`, `foreman-worker`, `foreman-verifier`, and (v0.3) `foreman-codex-wrapper` **by name**. Install the skill without the agents and delegation and blind verification won't work — so copy both directories, not just the skill.
 
 **Claude Code (manual):** clone this repo, then:
 

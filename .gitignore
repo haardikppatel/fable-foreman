@@ -4,3 +4,6 @@
 # ruflo / local tooling artifacts
 .swarm/
 ruvector.db
+
+# machine-local runtime state — never publish
+.claude-flow/
