@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.4.0 — 2026-08-17
+## 0.4.0 — 2026-08-18
 
 The "know what a seat costs" release. Adds xAI Grok as a third worker provider,
 gives routing a dated cost/capability evidence table, and makes review findings

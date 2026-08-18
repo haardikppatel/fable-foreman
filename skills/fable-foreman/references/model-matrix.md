@@ -20,7 +20,8 @@ xAI's own accounting for OAuth/pool traffic (14-headless-mode.md:184). Read it a
 a fixed internal rate — not as evidence about what the subscription *allowance*
 costs, and there is no comparable measurement for Claude or Codex subscriptions.
 Where an envelope reports a cost, record that number; use Table 1 only to compare
-seats.
+seats. The largest of them — the 6-turn plan review — moved 84.5K uncached +
+285.6K cache-read input tokens and 18K output for $0.0714.
 
 **Currency rule applies to this whole file.** Every number below is dated. Model
 lineups move faster than skill files. If anything here disagrees with the live
