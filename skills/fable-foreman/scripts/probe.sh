@@ -33,11 +33,14 @@ fi
 # not also be on PATH; $GROK_HOME (default ~/.grok) governs where its config
 # lives, so honor it for the binary fallback too.
 GROK_HOME_DIR="${GROK_HOME:-$HOME/.grok}"
-GROK_BIN=""
-if command -v grok >/dev/null 2>&1; then
+if [ -n "${GROK_BIN:-}" ] && [ -x "${GROK_BIN:-}" ]; then
+  : # explicit override — grok-dispatch.sh honors the same variable first
+elif command -v grok >/dev/null 2>&1; then
   GROK_BIN=$(command -v grok)
 elif [ -x "$GROK_HOME_DIR/bin/grok" ]; then
   GROK_BIN="$GROK_HOME_DIR/bin/grok"
+else
+  GROK_BIN=""
 fi
 
 if [ -n "$GROK_BIN" ]; then

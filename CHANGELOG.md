@@ -35,6 +35,13 @@ plan was cut back accordingly.
 - Grok detection in `scripts/probe.sh` (presence, version, auth mode, cached
   model ids — no billable call, no credential values printed).
 
+- **Route to what is actually there** (SKILL.md) — mode (harness capabilities) and
+  provider pool are now two independent axes instead of an enumerated combination
+  table. Any subset works: Claude-only, Claude+Codex, Claude+Grok, or all three.
+  Absence is a routing input, never a blocker, and the foreman never asks the user
+  to install a provider mid-run. Includes the case where mode and pool intersect to
+  leave no legal acceptor — handled by a disclosed reduced-assurance rule, not a stall.
+
 ### Changed
 - Seat routing now consults the matrix for the seat *within* a class, and prefers
   off-family workers for bulk implementation because Claude workers drain the same
@@ -86,6 +93,13 @@ fixed or explicitly disclosed), and live-tested head-to-head against v0.2.0.
 - **Silent-fallback hazard** documentation (`references/routing.md`) with
   current-build empirical results: what silently substitutes, what fails
   loudly, and the countermeasures.
+
+- **Route to what is actually there** (SKILL.md) — mode (harness capabilities) and
+  provider pool are now two independent axes instead of an enumerated combination
+  table. Any subset works: Claude-only, Claude+Codex, Claude+Grok, or all three.
+  Absence is a routing input, never a blocker, and the foreman never asks the user
+  to install a provider mid-run. Includes the case where mode and pool intersect to
+  leave no legal acceptor — handled by a disclosed reduced-assurance rule, not a stall.
 
 ### Changed
 - Hard rails: added rail 5 (seat provenance) and a tightly-scoped transport

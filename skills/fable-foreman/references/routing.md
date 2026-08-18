@@ -57,8 +57,11 @@ fixed and small (`grok-4.6` default, `grok-4.5`) → dispatch only through
   billed-tier, not served-tier (verification.md).
 - **Grok 4.5** — lower-capability fallback. **No `xhigh`** — sending it exits 1.
 - **The 200K cliff is a routing boundary, not a surcharge to absorb.** Grok
-  reprices the *whole* request 2x above 200K, at which point Sonnet 5 is both
-  cheaper and 2x the context. Above 500K Grok is ineligible outright. Apply it
+  reprices the *whole* request 2x above 200K — a jump that is certain from xAI's
+  published policy. Which alternative then wins on cost is **not** established
+  (Table 3): the comparison is list-price math, and measured Grok billing on a
+  subscription ran far under list. Route away from the surcharge; do not assert a
+  specific cheaper seat as fact. Above 500K Grok is ineligible outright. Apply it
   reactively, not by pre-counting tokens: the launcher prints `usage: input=…` and
   emits `CONTEXT WARN`/`CONTEXT ALERT`; once any call in a run crosses 200K, Grok
   is ineligible for equal-or-larger tickets. See model-matrix.md Table 3.

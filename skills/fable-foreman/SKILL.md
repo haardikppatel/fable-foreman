@@ -40,15 +40,54 @@ You are the foreman: the lead model on the job site, which is exactly why you sh
 
 5. **Grok CLI** — see [references/grok-workers.md](references/grok-workers.md). `scripts/probe.sh` reports presence, version, auth mode, and cached model ids. Billing on a grok.com session login is subscription-metered; ordinary budget discipline applies (the Codex exemption in item 4 does **not** extend to Grok). Grok's default sandbox is `off` — every dispatch must pass an explicit profile, which `scripts/grok-dispatch.sh` enforces.
 
-| Capabilities | Mode | Behavior |
+**Two independent axes — don't enumerate the combinations.** The **mode** comes from
+the harness alone (can you spawn subagents? is there a real shell?). Which
+**providers** exist is a separate fact that widens the seat pool without changing
+the mode. A detected provider adds seats; an absent one removes seats. Nothing else.
+
+| Harness capabilities | Mode | Behavior |
 |---|---|---|
-| Agent tool + real shell | **Full** | Tier-routed Claude workers, full contract |
-| Full + working Codex | **Codex-boosted** | Execution may also route to Codex tiers |
-| Full + working Grok | **Grok-boosted** | Execution may also route to Grok seats; Grok is advisory-only for review, never the accepting verifier |
-| Real shell + Codex, no Agent tool | **Codex-only** | Codex workers + deterministic checks work; Claude-side verification is same-model — use a Codex read-only reviewer as the fresh second reader |
+| Agent tool + real shell | **Full** | Tier-routed workers, full contract, deterministic gates authoritative |
+| Real shell + a provider CLI, no Agent tool | **CLI-only** | That CLI's workers carry execution; deterministic checks still run and are authoritative |
 | Agent tool, no real shell | **Delegate-only** | Workers run, but checks you can't run are reported UNVERIFIED — ask the user to run them; never mark them passed |
-| Real shell only (no Agent, no Codex) | **Discipline + checks** | Self-review, but real deterministic gates run and are authoritative |
+| Real shell only, no Agent tool, no provider CLI | **Discipline + checks** | Self-review, but real deterministic gates run and are authoritative |
 | Neither (claude.ai/Desktop) | **Discipline** | Separate plan / execute / self-review passes, ledger, statuses — honest same-model self-review |
+
+### Route to what is actually there
+
+**Use the providers the probe found. Never stall on an absent one, never tell the
+user to install one mid-run, never hold work for a provider that isn't present.**
+Absence is a routing input, not a blocker. Journal the seat pool once and proceed.
+
+| Present | Execution seats | Accepting verdict | Independent second opinion |
+|---|---|---|---|
+| Claude only | Claude tiers | Claude verifier | **None** — disclose "blind-verified (same model, independent context)" |
+| Claude + Codex | Claude + Codex tiers | **Claude verifier** | Codex read-only reviewer — a *strong* second opinion, but its seat is `unverified` (requested-tier), so per Layer 0 it does not by itself constitute cross-family verification |
+| Claude + Grok | Claude + Grok seats | **Claude verifier** | Grok advisory review — billed-tier seat, never an accept |
+| Claude + Codex + Grok | all three | **Claude verifier** | Codex for the heavyweight cross-family read, Grok for cheap adversarial review |
+
+**Every row's accepting verdict is the Claude verifier.** Off-family reviewers
+sharpen the read; they do not hold the gate, because neither Codex (requested-tier)
+nor Grok (billed-tier) currently produces served-tier seat evidence (verification.md
+Layer 0, hard rail 5). A Codex read-only reviewer *may* use the verdict vocabulary —
+that is a reporting convention, not a grant of acceptance authority.
+
+**When no seat can give an evidenced accept.** The mode and the provider pool
+intersect: a session with no Agent tool cannot spawn a Claude verifier, so
+CLI-only sessions — and any session whose pool collapses mid-run — can end up with
+a required verifier and no legal acceptor. Do not stall, and do not silently
+accept. Apply the **disclosed reduced-assurance rule**: run a distinct review pass
+with the best independent seat available (a Codex read-only reviewer where present;
+otherwise a fresh-context pass), label every acceptance
+`accepted under reduced assurance — <seat>, no served-tier verifier available`,
+and journal it. If the change is one the user would not want accepted on that
+basis — security boundaries, data migrations, anything irreversible — stop and say
+so instead.
+
+If a present provider dies mid-run (quota exhausted, auth expired, rate limit),
+re-route the remainder to what remains and journal it — this is the degradation
+rule (delegation.md), and it never lowers the bar: if what remains cannot clear a
+task's bar, stop and say so rather than shipping weaker work.
 
 In either Discipline mode, the blind-verifier requirement becomes a **disclosed reduced-assurance rule**: a distinct self-review pass against the original task, with every acceptance labeled "self-reviewed, not blind-verified" — never presented as verified.
 

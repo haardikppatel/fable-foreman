@@ -45,7 +45,7 @@ Before v0.3 the skill shelled out to `codex exec` directly from the foreman's ow
 - **Notifications over polling:** the harness notifies the foreman on wrapper completion; no polling loops, no foreground blocking, and LOST detection rides the harness's own task tracking.
 - **Foreman stays free:** long Codex builds no longer occupy the foreman's attention between dispatch and collection.
 
-Cost: one FAST wrapper's tokens per dispatch (small; the wrapper does no thinking). Direct launcher invocation from the foreman's own Bash remains correct in Codex-only mode (no Agent tool) and for sub-minute advisory calls where wrapper overhead exceeds the benefit.
+Cost: one FAST wrapper's tokens per dispatch (small; the wrapper does no thinking). Direct launcher invocation from the foreman's own Bash remains correct in CLI-only mode (no Agent tool) and for sub-minute advisory calls where wrapper overhead exceeds the benefit.
 
 **The wrapper contract (put it in the wrapper's prompt verbatim):**
 

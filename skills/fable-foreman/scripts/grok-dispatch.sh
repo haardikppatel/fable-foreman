@@ -17,10 +17,11 @@
 # <artifact-json>.stderr, the child PID to <artifact-json>.pid.
 set -eu
 
-# Resolution order MUST match scripts/probe.sh (PATH first, then $GROK_HOME/bin)
-# so Step 0 certifies the same binary that later gets paid. $GROK_BIN overrides
-# both; the resolved path is echoed in the envelope so the ledger records which
-# binary actually ran.
+# Resolution order matches scripts/probe.sh exactly — $GROK_BIN, then PATH, then
+# $GROK_HOME/bin — so Step 0 certifies the same binary that later gets paid.
+# probe.sh honors $GROK_BIN for the same reason. If you set it here, set it in
+# the environment the probe ran in too. The resolved path is echoed in the
+# envelope so the ledger records which binary actually ran.
 if [ -n "${GROK_BIN:-}" ]; then
   :
 elif command -v grok >/dev/null 2>&1; then
@@ -55,8 +56,12 @@ fi
 [ -f "$TICKET" ] || { echo "BLOCKED: ticket not found: $TICKET" >&2; exit 66; }
 [ -d "$WORKDIR" ] || { echo "BLOCKED: workdir not found: $WORKDIR" >&2; exit 66; }
 
-# Schema is read from a FILE, never passed as an inline argv blob: a schema is
-# attacker-shaped text and inline JSON is where quoting bugs live.
+# Schema is taken as a FILE PATH rather than an inline argv blob from the caller,
+# and validated as real JSON here before use. Be precise about what that buys:
+# the contents are still expanded onto grok's argv below (`--json-schema "$(cat
+# ...)"`), because that is the only interface the binary offers. What the file
+# indirection removes is caller-side quoting hazard and unvalidated text; it does
+# not keep the schema off the command line.
 if [ -n "$SCHEMA" ]; then
   [ -f "$SCHEMA" ] || { echo "BLOCKED: schema file not found: $SCHEMA" >&2; exit 66; }
   [ -L "$SCHEMA" ] && { echo "BLOCKED: schema path is a symlink: $SCHEMA" >&2; exit 64; }
@@ -72,7 +77,7 @@ fi
 if [ "$SANDBOX" = "read-only" ]; then
   ABS_WD=$(cd "$WORKDIR" 2>/dev/null && pwd -P) || { echo "BLOCKED: cannot resolve workdir" >&2; exit 66; }
   case "$ABS_WD" in
-    /tmp|/tmp/*|/private/tmp|/private/tmp/*|/var/tmp|/var/tmp/*)
+    /tmp|/tmp/*|/private/tmp|/private/tmp/*|/var/tmp|/var/tmp/*|/private/var/tmp|/private/var/tmp/*)
       echo "BLOCKED: read-only sandbox does not contain writes under /tmp ($ABS_WD) — site the reviewer elsewhere" >&2; exit 64 ;;
   esac
 fi

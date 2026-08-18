@@ -194,7 +194,7 @@ task, go up a tier or stop — never take the cheap row because it is cheap.
 | Architecture, ambiguous debugging, final judgment | FRONTIER | LEAD (Opus 5) | frontier subagent | Grok, luna, Haiku |
 | Accepting verdict on a change (blind verifier) | FRONTIER | **Claude verifier**; a **Codex read-only reviewer** is the sanctioned cross-family verifier (verification.md) | — | **Grok** — its seat evidence is billed-tier, and a Grok reviewer never leads with a verdict (grok-workers.md) |
 | Adversarial review / second opinion | FRONTIER-advisory | **Grok 4.6 @ high** | Codex sol | — |
-| Well-specified implementation, tests, refactors | WORKHORSE | **Grok 4.6 @ high** (<200K) when cost dominates; **sol / Sonnet 5** when execution reliability dominates — Grok trails both on agentic-execution benches (Table 4b) | the other of the two | — |
+| Well-specified implementation, tests, refactors | WORKHORSE | **Grok 4.6 @ high** (<200K) when cost dominates; **sol** when agentic-execution reliability dominates — the only measured head-to-head shows Grok trailing *sol* on DeepSWE and Terminal-Bench (Table 4b). No comparable execution measurement exists for Sonnet 5, whose only cross-model number here is the composite index (where Grok leads 61 to 55) — so do not pick Sonnet over Grok on reliability grounds this table cannot support. | Sonnet 5 / terra on pool grounds | — |
 | Large-context implementation (>200K) | WORKHORSE | **Sonnet 5** | terra | **Grok (cliff)**, Haiku (200K cap) |
 | Mechanical edits, extraction, scanning | FAST | **gpt-5.6-luna @ low** | Haiku 4.5 | frontier seats |
 | Repo-wide sweep (>500K) | any | Claude or Codex (1M ctx) | — | **Grok (500K ceiling)** |

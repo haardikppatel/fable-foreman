@@ -31,10 +31,14 @@ the foreman from whether the citations resolve.
 1. **Resolve every citation first.** `QUOTED` → the exact string must exist at the
    named location (grep it). `OBSERVED` → the named command must reproduce. This
    is cheap: a lookup, not a re-derivation.
-2. **Dismiss unsupported findings; do not escalate them to the user.** An
-   `INFERRED` finding, or one whose citation fails to resolve, is recorded
-   `DISMISSED (unsupported)` in the ledger with the reason, and never enters a fix
-   wave. Resolving a bad finding is the foreman's job, not the user's.
+2. **Unsupported findings do not enter a fix wave — but severity decides what
+   happens next.** A finding whose citation fails to resolve, or an `INFERRED`
+   finding below BLOCKER severity, is recorded `DISMISSED (unsupported)` in the
+   ledger with the reason. An **`INFERRED` finding that would be a BLOCKER if
+   true is investigated, never dropped**: the foreman establishes the evidence
+   itself or re-tasks it with a narrower scope, and only then dismisses or
+   promotes it (delegation.md). Resolving a bad finding is the foreman's job, not
+   the user's — but silently discarding a hard one is not resolving it.
 3. **Taint rule.** One fabricated citation means re-verify *every* finding in that
    report and write `seat reliability: fabricated citation` on the attempt line.
    That seat carries no advisory weight for the rest of the run.
@@ -47,7 +51,7 @@ the foreman from whether the citations resolve.
 
 ## When the verifier is required
 
-In Full, Codex-boosted, Codex-only, and Delegate-only modes: every accepted change, **except** single-file changes with no logic content (pure formatting, comments, docs). In Delegate-only mode the verifier still runs, but deterministic checks nobody could execute remain **UNVERIFIED** until the user supplies their results — a verifier verdict cannot substitute for an unrun check, so acceptance waits on both. In the Discipline modes there is no blind verifier — the disclosed reduced-assurance rule in SKILL.md replaces this section, and acceptances are labeled "self-reviewed, not blind-verified." That's the whole rule. "It seemed straightforward" is not an exemption — straightforward-looking changes are where unreviewed regressions live. If you are tempted to skip the verifier, that impulse is itself a signal the change deserves one.
+In Full, CLI-only, and Delegate-only modes: every accepted change, **except** single-file changes with no logic content (pure formatting, comments, docs). In Delegate-only mode the verifier still runs, but deterministic checks nobody could execute remain **UNVERIFIED** until the user supplies their results — a verifier verdict cannot substitute for an unrun check, so acceptance waits on both. In the Discipline modes there is no blind verifier — the disclosed reduced-assurance rule in SKILL.md replaces this section, and acceptances are labeled "self-reviewed, not blind-verified." That's the whole rule. "It seemed straightforward" is not an exemption — straightforward-looking changes are where unreviewed regressions live. If you are tempted to skip the verifier, that impulse is itself a signal the change deserves one.
 
 ## Layer 1 — Deterministic checks (free, always first)
 
