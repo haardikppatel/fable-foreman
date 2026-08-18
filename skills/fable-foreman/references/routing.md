@@ -39,17 +39,44 @@ Effort is a real dial, but only where a mechanism exists to set it. Per surface:
 
 ## Codex seats
 
-Follow codex-workers.md: probe → consent → **discover the account's actual tiers** (config.toml preference, `/model`, or asking the user; documentation ≠ entitlement; IDs differ by auth mode) → verify each tier you intend to use with one tiny call → map verified tiers to classes by the provider's published positioning → record the mapping in the ledger.
+Follow codex-workers.md: probe (billing mode noted, no consent ask — standing pre-approval) → **discover the account's actual tiers** (config.toml preference, `/model`, or asking the user; documentation ≠ entitlement; IDs differ by auth mode) → verify each tier you intend to use with one tiny call → map verified tiers to classes by the provider's published positioning → record the mapping in the ledger.
 
 Providers commonly ship flagship / workhorse / economy tiers, but treat that as a pattern to check, not an invariant. The user's configured default model is their *preference* — identify what it is before classifying it; a user who pinned the flagship as default did not thereby make the flagship your WORKHORSE.
 
 > **Dated example — not policy.** As of 2026-07 the Codex flagship family was GPT-5.6: Sol (flagship), Terra (positioned "everyday workhorse"), Luna ("clear repeatable tasks"), with ChatGPT-account logins using suffixed IDs (`gpt-5.6-sol`) where API-key auth used bare ones (`gpt-5.6`). By the time you read this, assume the lineup has changed — run the discovery procedure.
 
+## Grok seats
+
+Follow [grok-workers.md](grok-workers.md): probe → note billing mode → tiers are
+fixed and small (`grok-4.6` default, `grok-4.5`) → dispatch only through
+`scripts/grok-dispatch.sh`.
+
+- **Grok 4.6** — first-choice **FRONTIER-advisory** seat (adversarial review,
+  second opinion) and a first-choice **WORKHORSE** seat for well-specified
+  implementation. Never the accepting verifier verdict: its seat evidence is
+  billed-tier, not served-tier (verification.md).
+- **Grok 4.5** — lower-capability fallback. **No `xhigh`** — sending it exits 1.
+- **The 200K cliff is a routing boundary, not a surcharge to absorb.** Grok
+  reprices the *whole* request 2x above 200K, at which point Sonnet 5 is both
+  cheaper and 2x the context. Above 500K Grok is ineligible outright. Apply it
+  reactively, not by pre-counting tokens: the launcher prints `usage: input=…` and
+  emits `CONTEXT WARN`/`CONTEXT ALERT`; once any call in a run crosses 200K, Grok
+  is ineligible for equal-or-larger tickets. See model-matrix.md Table 3.
+- Grok auto-discovers the user's Claude Code config (CLAUDE.md, skills, plugins,
+  MCP). The launcher pins the countermeasures; never hand-compose a `grok`
+  command that skips them.
+
+Ordinary budget discipline **does** apply to Grok. The SKILL.md exemption is
+scoped to Codex alone and does not extend here.
+
 ## Choosing the seat for a task
 
+0. **Consult [model-matrix.md](model-matrix.md)** — the evidence table for price, capability, context limits, effort payoff, and task-type placement. This procedure decides *which class*; that table decides *which seat within it*, and records what each choice actually costs.
 1. Classify the task's *judgment content*, not its size. A 500-line mechanical rename is FAST; a 10-line concurrency fix is FRONTIER.
 2. Apply the First Law: cheapest seat that clearly clears the bar; unsure → one seat up.
-3. Claude vs Codex within a class: prefer the provider under less quota pressure; prefer cross-family pairing for build/verify; respect explicit user preference.
+2b. **Effort before tier.** The payoff curve depends on task shape, not difficulty: analysis/review is nearly flat (medium ≈ high at 70-85% of cost), long-horizon coding is steep. Raising effort costs ~20%; raising a tier costs 2-5x. See model-matrix.md Table 4.
+2c. **Claude workers drain the same allowance the foreman runs on**; Codex and Grok workers do not. For bulk implementation, prefer an off-family seat so the run itself lasts longer. This never licenses a seat that fails the task's bar — remaining allowance is not observable on any provider, so nothing here allocates quota.
+3. Claude vs Codex vs Grok within a class: prefer the provider under less quota pressure; prefer cross-family pairing for build/verify; respect explicit user preference.
 4. Log every routing decision in one ledger line: `task → class → seat (+effort if applied) — why`.
 
 ## Currency rule

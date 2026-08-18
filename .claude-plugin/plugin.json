@@ -1,7 +1,7 @@
 {
   "name": "fable-foreman",
-  "description": "Turn your strongest Claude model into a team-lead orchestrator: it plans and reviews, delegates execution to the cheapest capable workers (Claude subagents or auto-detected Codex CLI workers), and blind-verifies meaningful changes before accepting them.",
-  "version": "0.3.0",
+  "description": "Turn your strongest Claude model into a team-lead orchestrator: it plans and reviews, delegates execution to the cheapest capable workers (Claude subagents, or auto-detected Codex CLI and xAI Grok workers), routes from a dated cost/capability matrix, and blind-verifies meaningful changes before accepting them.",
+  "version": "0.4.0",
   "author": {
     "name": "Jordan Olsen",
     "email": "jordan@olsenbrands.com"
@@ -17,6 +17,9 @@
     "codex",
     "cost-optimization",
     "multi-agent",
-    "verification"
+    "verification",
+    "grok",
+    "xai",
+    "cost-matrix"
   ]
 }

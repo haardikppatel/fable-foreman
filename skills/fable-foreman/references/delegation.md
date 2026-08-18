@@ -86,6 +86,86 @@ When usage limits bite, do **not** blanket-downshift. Re-run the routing decisio
 - If a cheaper seat still clears that task's quality bar (tasks are often conservatively over-provisioned), step down **and journal it visibly**.
 - If no affordable seat clears the bar, **stop after the current task and tell the user**. A clean stop beats degraded judgment — the First Law is not suspended by budget pressure.
 
+## The finding contract (every reviewer, every provider)
+
+Any ticket asking a seat to produce findings — review, audit, adversarial
+critique, verifier notes — MUST require this shape per finding, in its OUTPUT
+FORMAT. Prose without it is a failed ticket, not a soft miss.
+
+```
+FINDING <n> | <BLOCKER|MAJOR|MINOR> | <QUOTED|OBSERVED|DERIVED|INFERRED>
+CLAIM:   <one sentence — the defect, not the fix>
+CITE:    <file>:<line-or-anchor> — "<exact text, verbatim>"   (QUOTED/DERIVED: required)
+COMMAND: <exact command> -> <exit code / key output line>     (OBSERVED: required)
+SO-WHAT: <the consequence if true>
+```
+
+The evidence class is an **objective property of the citation**, not the seat's
+feeling about its own claim:
+
+| Class | Means | Foreman check |
+|---|---|---|
+| `QUOTED` | exact text at a named location | grep the string |
+| `OBSERVED` | output of a command the seat ran | re-run it |
+| `DERIVED` | inference built on cited quotes | verify quotes, then judge the inference |
+| `INFERRED` | reasoning only, no citation | a lead — never actionable alone |
+
+Grading and dismissal rules live in verification.md ("Finding triage"). The payoff
+is cost as much as accuracy: checking "SKILL.md line 27 says X" is a lookup;
+checking "this contradicts the First Law" is a re-derivation.
+
+**What the contract does NOT do — read this before trusting it.** A resolved
+citation proves *the text exists*, never that it *supports the claim*. A seat can
+quote a real line and draw a false conclusion from it, and that report passes a
+naive grep check. So:
+
+- **`QUOTED` earns a cheap existence check, not acceptance.** After the string
+  resolves, judge whether it actually supports the claim. `DERIVED` always
+  requires judging the inference on top of the quotes.
+- **Severity is the foreman's call, not the seat's.** Confidence self-reports were
+  banned for a reason; a self-assigned `BLOCKER` is the same species of claim.
+  Re-rank every finding before it enters a fix wave.
+- **`INFERRED` means not-yet-actionable, never discarded.** An `INFERRED` finding
+  that would be a BLOCKER if true is *investigated* — the foreman establishes the
+  evidence itself or re-tasks it with a narrower scope. Dropping hard, poorly-cited
+  findings while shipping well-cited trivia is the failure mode this contract
+  would otherwise create.
+
+## Self-correction — resolve it, don't escalate it
+
+**The foreman resolves what the evidence already settles. It does not hand the
+user a decision it can make itself.** On a `FAIL` verdict or a confirmed finding:
+
+1. Triage findings (verification.md). Unsupported ones are dismissed and journaled — not raised with the user.
+2. Batch every surviving finding into **one** fix ticket with the verifier's evidence verbatim.
+3. Dispatch the fix to a **worker**.
+4. Re-verify with a **fresh** verifier that never saw the first exchange.
+
+**The verifier never edits.** A verifier that repairs what it just judged is
+grading its own work, and blind verification collapses. Judgment, repair, and
+re-verification are three separate seats — this is why `foreman-verifier` ships
+with no edit tools.
+
+**Bounded by the precedence table below**, so "keep trying" never becomes the
+plan: two consecutive failed fix waves on the same findings list → stop and report
+(row 5). Never a third identical retry.
+
+**Stopping is not escalating.** The foreman still stops — with evidence — for:
+
+- **an ask that was advisory in the first place.** If the user requested a review,
+  an audit, an opinion, or a plan, the deliverable is findings. Self-correction
+  applies to work the foreman was told to *produce*, never as licence to start
+  implementing off the back of a review the user asked for. Report and ask.
+- a **design, architecture, product, or security-posture choice** — a well-cited
+  finding can still be a *judgment call the user owns*, not a settled defect.
+- a **user-visible contract change** (API shape, output format, defaults, schema).
+- an **external blocker** it must not work around (credentials, permissions).
+- an **irreversible or destructive** action.
+- a **policy refusal**, or **no available seat clearing the task's bar**. Those are reports the First Law requires, and they
+are never satisfied by shipping degraded work instead. Everything else — a wrong
+finding, a failed check, a bad ticket, a flaky seat — the foreman fixes and
+journals.
+
 ## Fix waves
 
 Findings from review/verification batch into **one** fix ticket carrying the complete findings list and the verifier's evidence verbatim — never one worker per finding (each rebuilds context and re-runs suites). Fix output re-enters verification. Two consecutive failed waves → precedence row 5.
@@ -104,7 +184,7 @@ BASELINE: <commit hash> | <git status --porcelain summary> | <date>
               task | attempt # | seat + effort | ticket rev | outcome
               (status/verdict/LOST + failure class) | checks run + results |
               evidence/artifact paths | timestamp>
-## Decisions  <choices + why; seat changes; degradations; consent grants>
+## Decisions  <choices + why; seat changes; degradations; Codex billing mode noted>
 ## Scratch    <artifact paths>
 ```
 

@@ -29,6 +29,68 @@ else
   echo "codex: NOT installed"
 fi
 
+# Grok CLI (xAI). Binary is normally at $HOME/.grok/bin/grok and may or may
+# not also be on PATH; $GROK_HOME (default ~/.grok) governs where its config
+# lives, so honor it for the binary fallback too.
+GROK_HOME_DIR="${GROK_HOME:-$HOME/.grok}"
+GROK_BIN=""
+if command -v grok >/dev/null 2>&1; then
+  GROK_BIN=$(command -v grok)
+elif [ -x "$GROK_HOME_DIR/bin/grok" ]; then
+  GROK_BIN="$GROK_HOME_DIR/bin/grok"
+fi
+
+if [ -n "$GROK_BIN" ]; then
+  echo "grok: installed ($GROK_BIN)"
+  GROK_VERSION=$("$GROK_BIN" --version 2>&1) || GROK_VERSION="UNKNOWN (version command failed)"
+  echo "grok version: $GROK_VERSION"
+
+  AUTH_FILE="$GROK_HOME_DIR/auth.json"
+  if [ -s "$AUTH_FILE" ]; then
+    # Presence only — never print token/key values. auth_mode is non-secret
+    # metadata (e.g. "oidc"); the pattern is anchored to that literal key
+    # name so it can never match the adjacent "key"/"refresh_token" lines
+    # that hold real credentials. jq is used when available for accuracy and
+    # falls back to the same anchored grep otherwise.
+    if command -v jq >/dev/null 2>&1; then
+      AUTH_MODE=$(jq -r '[.[].auth_mode][0] // empty' "$AUTH_FILE" 2>/dev/null) || AUTH_MODE=""
+    else
+      AUTH_MODE=$(grep -o '"auth_mode"[[:space:]]*:[[:space:]]*"[^"]*"' "$AUTH_FILE" 2>/dev/null | head -1 | sed -E 's/.*:[[:space:]]*"([^"]*)"/\1/') || AUTH_MODE=""
+    fi
+    if [ -n "$AUTH_MODE" ]; then
+      echo "grok auth: credentials file present (mode: $AUTH_MODE)"
+    else
+      echo "grok auth: credentials file present (mode unknown)"
+    fi
+  else
+    echo "grok auth: NOT authenticated (no credentials file at $AUTH_FILE)"
+  fi
+
+  # Model ids from the local cache only — never calls the API. Structural
+  # extraction (which JSON key is a model id vs. a nested field like
+  # "info"/"laziness_detector") needs a real parser to stay correct, so this
+  # only reports ids when jq is available and admits it otherwise rather
+  # than risk emitting wrong ids from a regex guess.
+  MODELS_CACHE="$GROK_HOME_DIR/models_cache.json"
+  if [ -s "$MODELS_CACHE" ]; then
+    if command -v jq >/dev/null 2>&1; then
+      MODEL_IDS=$(jq -r '(.models | keys) // [] | join(", ")' "$MODELS_CACHE" 2>/dev/null) || MODEL_IDS=""
+    else
+      MODEL_IDS=""
+    fi
+    if [ -n "$MODEL_IDS" ]; then
+      echo "grok models (cached): $MODEL_IDS"
+    else
+      echo "grok models (cached): cache file present but ids not parsed (jq unavailable or unexpected format)"
+    fi
+  else
+    echo "grok models (cached): no local cache at $MODELS_CACHE"
+  fi
+else
+  echo "grok: NOT installed"
+fi
+echo "grok sandbox: default is OFF — dispatches must always pass an explicit sandbox profile"
+
 # Native-transport (claudemix-style splitter) facts — reported separately;
 # presence of parts does not mean the transport is routable (setup-runbook.md).
 if command -v cliproxyapi >/dev/null 2>&1; then

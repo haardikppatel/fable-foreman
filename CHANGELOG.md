@@ -1,5 +1,55 @@
 # Changelog
 
+## 0.4.0 — 2026-08-17
+
+The "know what a seat costs" release. Adds xAI Grok as a third worker provider,
+gives routing a dated cost/capability evidence table, and makes review findings
+citable and self-correcting. Hardened by an adversarial review from Grok itself,
+which returned VERDICT:REVISE with four blockers — three were conceded and the
+plan was cut back accordingly.
+
+### Added
+- **`references/model-matrix.md`** — the evidence table behind seat selection:
+  price, capability index, context ceilings, cache discounts, effort payoff, and
+  task-type placement, each dated and sourced. Includes real per-dispatch cost
+  comparisons and the finding that list prices are an *upper bound* on
+  subscription-metered accounts.
+- **Grok worker support** — `references/grok-workers.md`,
+  `scripts/grok-dispatch.sh` (fixed-argv launcher), and
+  `agents/foreman-grok-wrapper.md` (transport wrapper).
+- **The finding contract** (delegation.md) — every reviewer, any provider, tags
+  each finding `QUOTED` / `OBSERVED` / `DERIVED` / `INFERRED` and shows its
+  citation. Seats are never asked to self-rate confidence.
+- **Finding triage** (verification.md) — the foreman resolves citations before
+  grading code; unsupported findings are dismissed and journaled, and one
+  fabricated citation taints its whole report.
+- **Self-correction** (delegation.md) — confirmed findings go to a fix worker and
+  then a *fresh* verifier, automatically. The verifier never edits. Bounded by the
+  existing precedence table. Stopping remains reserved for: an ask that was
+  advisory in the first place (a review is not a licence to implement), a design /
+  architecture / security-posture choice or user-visible contract change the user
+  owns, external blockers, destructive actions, policy refusals, or a bar no seat
+  clears.
+- **`BILLED` evidence tier** (verification.md) — ranked below `SERVED`, for
+  provider accounting like Grok's `modelUsage`. It never makes a seat `verified`.
+- Grok detection in `scripts/probe.sh` (presence, version, auth mode, cached
+  model ids — no billable call, no credential values printed).
+
+### Changed
+- Seat routing now consults the matrix for the seat *within* a class, and prefers
+  off-family workers for bulk implementation because Claude workers drain the same
+  allowance the foreman itself runs on.
+- Effort guidance is now task-shape aware: analysis/review curves are nearly flat
+  (prefer `medium`), long-horizon coding is steep (prefer `high`).
+
+### Deliberately NOT changed
+- **The First Law is untouched.** An earlier draft would have made it
+  "pool-aware" so quota pressure could move the quality bar. The adversarial
+  review called that institutionalizing a past failure, and it was dropped.
+- **Grok cannot hold a verifier verdict.** Its seat evidence is billed-tier, not
+  served-tier, so it is an advisory reviewer and second opinion only.
+- The Codex budget-discipline exemption remains scoped to Codex alone.
+
 ## 0.3.0 — 2026-08-07
 
 The "trust the log, see the crew" release. Derived from a comparative study of
