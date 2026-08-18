@@ -1,7 +1,5 @@
 # Fable Foreman
 
-**Your strongest model shouldn't be swinging the hammer.**
-
 Fable Foreman is a Claude Code orchestration skill that keeps Fable (or Opus) in the frontier seat — planning, routing, and verifying — while assigning the coding, recon, and research to less expensive but capable models: Claude Sonnet and Haiku subagents, OpenAI Codex CLI workers, and xAI Grok CLI workers, whichever your machine actually has.
 
 Think of it as the architect on a construction site. The architect writes the blueprints, decides who does what, and inspects the work; the plumbers, electricians, and framers do the building. Fable is the architect. The cheaper models are the subcontractors — good at their trade, cheaper by the hour, and never left unsupervised.
