@@ -2,9 +2,15 @@
 
 **Your strongest model shouldn't be swinging the hammer.**
 
-Built in public by [DontSleepOnAI](https://dontsleeponai.com) — the story behind this skill (including the five-round adversarial review where OpenAI's newest model tore apart the first draft) lives there.
+Fable Foreman is a Claude Code orchestration skill that keeps Fable (or Opus) in the frontier seat — planning, routing, and verifying — while assigning the coding, recon, and research to less expensive but capable models: Claude Sonnet and Haiku subagents, OpenAI Codex CLI workers, and xAI Grok CLI workers, whichever your machine actually has.
 
-Fable Foreman turns whichever frontier-class Claude model leads your session into a team lead: it plans, routes each task to the cheapest worker that clears the quality bar — Claude subagents, OpenAI Codex CLI workers, or xAI Grok CLI workers, auto-detected — and refuses to accept meaningful changes until a blind, fresh-context Claude verifier reproduces the evidence. Any subset of those providers works; absence is a routing input, never a blocker. (Environments without subagents get an honest reduced-assurance mode that says so.)
+Think of it as the architect on a construction site. The architect writes the blueprints, decides who does what, and inspects the work; the plumbers, electricians, and framers do the building. Fable is the architect. The cheaper models are the subcontractors — good at their trade, cheaper by the hour, and never left unsupervised.
+
+**How it chooses the crew.** The foreman reads the plan and the workload and classifies each task by the *judgment* it needs — FRONTIER (architecture, ambiguous debugging, final calls), WORKHORSE (well-specified implementation, tests, refactors), FAST (scanning, mechanical edits, extraction). Then a dated cost/capability matrix picks the cheapest seat within that class that clears the bar, weighing per-model price, cache discount, context ceiling, a capability index, the reasoning-effort level that actually pays off for that shape of task, and which subscription pool the call drains. Economics chooses among the models that clear the bar; it never lowers the bar. Any subset of providers works — Claude only, Claude + Codex, Claude + Grok, or all three — and an absent provider is a routing input, never a stall.
+
+**Nothing ships unverified.** No agent grades its own work. Every meaningful change goes to a blind, fresh-context verifier that gets your original request verbatim, none of the worker's reasoning, and read-only tools — and the accepting verdict is always the Claude verifier. Off-family reviewers (Codex, Grok) sharpen the read; they never hold the gate. Which model actually served a dispatch is established from evidence, never from the model's own say-so, and every dispatch, verdict, and cost lands in an append-only ledger.
+
+**The result:** frontier-class planning and oversight from Fable or Opus; top-tier implementation, recon, and research from capable subagents at a fraction of the token cost; and a run you can audit afterwards. On subscription plans that means quality per token and a session that lasts longer; on API keys it is direct savings. Environments without subagents (Claude Desktop, claude.ai) get an honest reduced-assurance mode that says so.
 
 No dated model IDs in routing policy. No configuration files. One skill, five agent roles, four small deterministic scripts, and a set of rules good enough that a frontier model actually follows them.
 
