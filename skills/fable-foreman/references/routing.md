@@ -19,7 +19,7 @@ The session model is the **LEAD seat** — it runs you, the foreman. Do not assu
 - **When to spend a frontier worker** (the First Law still applies — this is the expensive seat): genuinely independent frontier-judgment workstreams that must run in parallel; a blind verifier for a frontier-class change when no Codex counterpart exists; or a second opinion on a decision the run hinges on. Not for implementation a WORKHORSE clears. An Opus lead dispatching Opus workers is ordinary routing, not an escalation — but it is the priciest crew you can field, so announce it like any other fan-out.
 - Pass the model per dispatch via the Agent tool's `model` parameter (overrides agent-file frontmatter). Treat it as a *request*: runtimes may substitute if the org disallows a tier. A dispatch behaving far above or below its class is a *trigger to check provenance* (verification.md Layer 0) — behavior is never itself the provenance mechanism, in either direction: anomalous output doesn't prove substitution, and normal-looking output doesn't prove the requested seat served.
 
-- The built-in `Explore` agent inherits the session model — from any frontier LEAD that is an expensive default for background scanning, and when LEAD and `Explore` resolve to the same model you are paying frontier rates to grep. Dispatch `foreman-scout` (FAST) instead.
+- The built-in `Explore` agent inherits the session model — from any frontier LEAD that is an expensive default for background scanning, and when LEAD and `Explore` resolve to the same model you are paying frontier rates to grep. Dispatch `foreman-scout` (FAST) instead. (With Codex present, model-matrix.md prefers `gpt-5.6-luna` for FAST work; the bundled scout is haiku-pinned — use it for sub-minute recon where wrapper overhead would exceed the saving, and a luna Codex dispatch for large mechanical sweeps.)
 
 ### The silent-fallback hazard
 
@@ -39,7 +39,7 @@ Effort is a real dial, but only where a mechanism exists to set it. Per surface:
 
 ## Codex seats
 
-Follow codex-workers.md: probe (billing mode noted, no consent ask — standing pre-approval) → **discover the account's actual tiers** (config.toml preference, `/model`, or asking the user; documentation ≠ entitlement; IDs differ by auth mode) → verify each tier you intend to use with one tiny call → map verified tiers to classes by the provider's published positioning → record the mapping in the ledger.
+Follow codex-workers.md: probe → consent → **discover the account's actual tiers** (config.toml preference, `/model`, or asking the user; documentation ≠ entitlement; IDs differ by auth mode) → verify each tier you intend to use with one tiny call → map verified tiers to classes by the provider's published positioning → record the mapping in the ledger (consent is skipped only when the probe reports the user's opt-in pre-approval — codex-workers.md).
 
 Providers commonly ship flagship / workhorse / economy tiers, but treat that as a pattern to check, not an invariant. The user's configured default model is their *preference* — identify what it is before classifying it; a user who pinned the flagship as default did not thereby make the flagship your WORKHORSE.
 
@@ -62,15 +62,23 @@ fixed and small (`grok-4.6` default, `grok-4.5`) → dispatch only through
   (Table 3): the comparison is list-price math, and measured Grok billing on a
   subscription ran far under list. Route away from the surcharge; do not assert a
   specific cheaper seat as fact. Above 500K Grok is ineligible outright. Apply it
-  reactively, not by pre-counting tokens: the launcher prints `usage: input=…` and
-  emits `CONTEXT WARN`/`CONTEXT ALERT`; once any call in a run crosses 200K, Grok
-  is ineligible for equal-or-larger tickets. See model-matrix.md Table 3.
-- Grok auto-discovers the user's Claude Code config (CLAUDE.md, skills, plugins,
-  MCP). The launcher pins the countermeasures; never hand-compose a `grok`
-  command that skips them.
+  reactively, not by pre-counting tokens: the launcher reports the dispatch's
+  average prompt size per model call and emits `CONTEXT WARN`/`CONTEXT ALERT`.
+  **Reactive rule:** after a `CONTEXT ALERT`, do not send Grok another ticket
+  that carries the *same context set or a superset* (same working files/paths
+  plus the same or a longer resumed session) — that is a fact the foreman knows
+  from what it put in the ticket. A fresh ticket with a smaller context set may
+  still use Grok; when unsure, don't. A `CONTEXT WARN` means shrink the next
+  ticket's context or split it. See model-matrix.md Table 3.
+- Grok auto-discovers the user's Claude Code config (CLAUDE.md, skills, agents,
+  MCP servers, hooks) by default. The launcher switches that discovery off at
+  the source (`GROK_CLAUDE_*_ENABLED=false`) and pins the remaining
+  countermeasures; never hand-compose a `grok` command that skips them. Grok
+  still prepends its own system prompt and toolset (~19K tokens on this build
+  with discovery off; ~28K with the user's Claude config discovered).
 
-Ordinary budget discipline **does** apply to Grok. The SKILL.md exemption is
-scoped to Codex alone and does not extend here.
+Ordinary budget discipline **does** apply to Grok; the user's opt-in Codex
+pre-approval (SKILL.md Step 0 item 4) does not extend here.
 
 ## Choosing the seat for a task
 

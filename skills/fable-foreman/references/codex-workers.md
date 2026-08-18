@@ -13,17 +13,17 @@ test -s "${CODEX_HOME:-$HOME/.codex}/auth.json"    # 2b. fallback if the subcomm
 - Step 2 is the documented status command; its output also tells you **how the account is billed** (ChatGPT subscription vs API key). If the subcommand itself fails to run (auth subcommands have been renamed across Codex releases before), the credential-file fallback proves only that credentials *exist* — it cannot tell you the billing mode. In that case the mode is **unknown**: say so, and require explicit user confirmation before any billable call. (Honor `$CODEX_HOME`; some setups store credentials in an OS keyring, where only the status command is reliable.)
 - **Do not use the GNU `timeout` command** — it doesn't exist on stock macOS or Windows. Use your shell tool's own timeout parameter, set generously (60s+): a slow response is latency, not absence.
 
-## Billing (standing pre-approval — no per-dispatch ask)
+## Consent and billing (before any model call)
 
-The probe above is metadata-only and free. An actual Codex invocation **spends the user's OpenAI account** — subscription quota, or real metered dollars on an API key — and the user has given standing pre-approval for that spend, including frontier-tier calls. Do not ask before dispatching. Before the first dispatch of a session:
+The probe above is metadata-only and free. An actual Codex invocation **spends the user's OpenAI account** — subscription quota, or real metered dollars on an API key. Before the first dispatch:
 
-1. Note which billing mode `login status` reported.
-2. Record it in the ledger.
-3. Dispatch — no confirmation step.
+1. Tell the user Codex is available and which billing mode `login status` reported.
+2. Confirm they want Codex in the rotation — unless they already asked for Codex this session, which is consent.
+3. Record the consent (and mode) in the ledger.
 
-Run the functional check up front — one tiny call, cheapest tier you can name confidently or the account default: `codex exec "Reply with exactly: ok"`. If it fails while credentials exist, they're likely expired: tell the user to run `codex login`; never initiate an interactive auth flow yourself.
+Only after consent, run the functional check — one tiny call, cheapest tier you can name confidently or the account default: `codex exec "Reply with exactly: ok"`. If it fails while credentials exist, they're likely expired: tell the user to run `codex login`; never initiate an interactive auth flow yourself.
 
-The user will tell you directly if a given run needs a Codex budget cap. Absent that, default to using Codex often and ambitiously — reach for its frontier tier whenever it's the right seat, rather than economizing.
+**Opt-in pre-approval.** If `scripts/probe.sh` printed `codex billing: PRE-APPROVED (user config)` (the user created `~/.foreman/codex-preapproved` or exported `FOREMAN_CODEX_PREAPPROVED=1`), steps 1–2 are skipped: note the billing mode and `pre-approved by user config` in the ledger and dispatch — the user has asked for Codex to be used ambitiously on this machine. The flag is machine-local and never part of this repository.
 
 ## Discovering the account's tiers
 
@@ -50,8 +50,15 @@ Cost: one FAST wrapper's tokens per dispatch (small; the wrapper does no thinkin
 **The wrapper contract (put it in the wrapper's prompt verbatim):**
 
 1. Run `scripts/codex-dispatch.sh` (in this skill's directory) exactly once, with exactly the six arguments given in your ticket — ticket file, model, effort, sandbox, artifact path, workdir. Never compose a raw `codex` command, never add shell operators around the launcher, never run it twice, never edit any file yourself. Set your shell tool's timeout to the deadline named in the ticket.
-2. Relay two things, clearly separated: first the launcher's **transport envelope** (its stdout: exit code, duration, seat evidence — verbatim), then the Codex worker's final message extracted from the artifact JSONL, **verbatim** — no summarizing, no interpretation. You are transport, not a reviewer.
+2. Relay two things, clearly separated: first the launcher's **transport envelope** (its stdout: exit code, duration, seat evidence — verbatim), then the Codex worker's final message, produced by running **exactly** this read-only command against the JSONL artifact and relaying its stdout verbatim — it prints the `text` of the last agent-message `item.completed` event in the stream:
+
+   ```bash
+   python3 -c 'import json,sys;E=[json.loads(l) for l in open(sys.argv[1],encoding="utf-8",errors="replace") if l.strip().startswith("{")];M=[e["item"].get("text") for e in E if isinstance(e,dict) and e.get("type")=="item.completed" and isinstance(e.get("item"),dict) and "agent" in str(e["item"].get("item_type") or e["item"].get("type") or "") and e["item"].get("text")];print(M[-1] if M else "RELAY FAILED: no agent-message item.completed event in artifact")' <artifact-jsonl>
+   ```
+
+   Never retype, summarize, or reconstruct it; if the command fails, relay its error and say `RELAY FAILED`. You are transport, not a reviewer.
 3. Spawn nothing; write nothing except the artifact files the launcher itself names.
+4. Your relay is transport metadata. The foreman reads the artifact file directly for anything it will act on.
 
 **Vocabulary discipline:** the transport envelope is *transport metadata*, not a report vocabulary. The worker status (`DONE`/`BLOCKED`/…) or verifier verdict (`PASS`/`FAIL`/…) is read from the first line of the **relayed Codex message**, exactly as if Codex had reported directly; the foreman enters `REPORTED(status)` from that line alone. An envelope without a parseable status line in the relayed message maps to `BLOCKED` (see failure mapping). Three vocabularies remain three (delegation.md).
 
@@ -64,6 +71,7 @@ Cost: one FAST wrapper's tokens per dispatch (small; the wrapper does no thinkin
 | Exit 0, empty final message / malformed JSONL | `BLOCKED`; artifact retained for diagnosis |
 | Wrapper itself silent past its deadline | Wrapper task is `LOST` — apply the LOST protocol (delegation.md) to the *wrapper*; then reconcile the workspace before any retry, because the inner Codex process may have kept editing after the wrapper died |
 | Envelope reports `seat: unverified` | Normal under current Codex builds — record it; Layer 0 consequences apply (verification.md) |
+| Relayed message does not match the artifact | Wrapper contract breach; use the artifact, ledger `wrapper relay: unreliable`, and do not reuse that wrapper seat this run |
 
 The wrapper is transport, not delegation — this is the sanctioned carve-out to "workers never spawn workers" (SKILL.md hard rail 1), and it is tight *because the launcher pins the argv*: the wrapper has no legitimate reason to touch `codex` directly, and a wrapper that does has broken contract.
 
@@ -94,7 +102,9 @@ codex exec -m <verified-model> -c model_reasoning_effort=<level> \
 
 ## Reading back
 
-Codex workers follow the same contract as Claude workers: **status as the first line of the final message** (`DONE` / `DONE_WITH_CONCERNS` / `NEEDS_CONTEXT` / `BLOCKED` — put this in every execution ticket's OUTPUT FORMAT), evidence not narrative, artifacts to `.foreman/scratch/` with paths. A Codex read-only reviewer acting as the verifier is the one exception: it leads with the verifier verdict (`PASS` / `FAIL` / `PASS_WITH_NOTES`) per verification.md. Treat Codex self-reports with the same distrust as any worker's — independent evaluators have measured frontier tiers gaming checks at record rates. Cross-family verification (Claude verifies Codex work) is the default.
+Codex workers follow the same contract as Claude workers: **status as the first line of the final message** (`DONE` / `DONE_WITH_CONCERNS` / `NEEDS_CONTEXT` / `BLOCKED` — put this in every execution ticket's OUTPUT FORMAT), evidence not narrative, artifacts to `.foreman/scratch/` with paths. A Codex read-only reviewer asked for a review verdict may lead with the verdict vocabulary (`PASS` / `FAIL` / `PASS_WITH_NOTES`) as a reporting convention (verification.md) — the accepting verdict on a change is still the Claude verifier's. Treat Codex self-reports with the same distrust as any worker's — independent evaluators have measured frontier tiers gaming checks at record rates. Cross-family review is the default: Claude verifies Codex work.
+
+**The relay is a claim.** A haiku transport wrapper was observed (2026-08-18) relaying an invented report while the on-disk artifact held the real, schema-valid one. For any class-sensitive read — verdicts, findings entering a fix wave, statuses that decide routing — the foreman reads the artifact file directly; the relay serves notification and status only.
 
 ## Quota notes
 

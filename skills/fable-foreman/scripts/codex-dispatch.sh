@@ -67,6 +67,10 @@ EVIDENCE=""
 if command -v python3 >/dev/null 2>&1; then
   EVIDENCE=$(python3 - "$OUT" <<'PYEOF'
 import json, sys
+# `candidate` must exist before the loop: it is only assigned inside the
+# model-field branch, so a stream with no model field (or a request-side one)
+# raised NameError on the `if candidate is not None` check below.
+candidate = None
 try:
     with open(sys.argv[1], encoding="utf-8", errors="replace") as f:
         for line in f:

@@ -17,11 +17,14 @@
 # <artifact-json>.stderr, the child PID to <artifact-json>.pid.
 set -eu
 
-# Resolution order matches scripts/probe.sh exactly — $GROK_BIN, then PATH, then
+[ $# -ge 5 ] || { echo "BLOCKED: usage: grok-dispatch.sh <ticket-file> <model> <effort> <read-only|workspace> <artifact-json> [workdir] [resume-session-id] [schema-file]" >&2; exit 64; }
+
+# Resolution order matches scripts/probe.sh — $GROK_BIN, then PATH, then
 # $GROK_HOME/bin — so Step 0 certifies the same binary that later gets paid.
-# probe.sh honors $GROK_BIN for the same reason. If you set it here, set it in
-# the environment the probe ran in too. The resolved path is echoed in the
-# envelope so the ledger records which binary actually ran.
+# probe.sh applies the same order and, like this script, refuses rather than
+# falling through when $GROK_BIN is set but not executable. If you set it here,
+# set it in the environment the probe ran in too. The resolved path is echoed in
+# the envelope so the ledger records which binary actually ran.
 if [ -n "${GROK_BIN:-}" ]; then
   :
 elif command -v grok >/dev/null 2>&1; then
@@ -71,6 +74,18 @@ if [ -n "$SCHEMA" ]; then
   fi
 fi
 
+# --prompt-file and --json-schema paths are resolved by grok relative to --cwd,
+# so everything is absolutized here (verified 2026-08-18: a relative ticket with
+# a different workdir failed with 'No such file'). OUT is absolutized too so the
+# artifact checks below and the envelope name the same file the caller meant.
+case "$TICKET" in /*) ;; *) TICKET="$PWD/$TICKET" ;; esac
+case "$OUT" in /*) ;; *) OUT="$PWD/$OUT" ;; esac
+if [ -n "$SCHEMA" ]; then
+  case "$SCHEMA" in /*) ;; *) SCHEMA="$PWD/$SCHEMA" ;; esac
+fi
+WORKDIR=$(cd "$WORKDIR" && pwd -P)
+[ -d "$(dirname "$OUT")" ] || { echo "BLOCKED: artifact directory does not exist: $(dirname "$OUT")" >&2; exit 66; }
+
 # The read-only profile does NOT contain writes under /tmp (verified 2026-08-17:
 # a file was created in a /private/tmp workdir under --sandbox read-only). A
 # read-only reviewer sited there is not isolated, so refuse it outright.
@@ -95,22 +110,31 @@ done
 # placeholders are fine, real files are not ours to destroy.
 [ -s "$OUT" ] && { echo "BLOCKED: artifact path already exists and is non-empty: $OUT (refusing to truncate)" >&2; exit 64; }
 
-# Grok auto-discovers the user's Claude world (CLAUDE.md, skills, plugins, MCP
-# servers) — verified. Without these pins a dispatched worker inherits the whole
-# personal environment and will, e.g., obey a global auto-archive rule and write
-# into the user's vault (observed 2026-08-17). Prose alone does not stop it;
-# these are tool-layer denials.
-WORKER_RULES='You are a dispatched worker in a headless, non-interactive run. Do NOT write any session log. Do NOT write to the Obsidian vault or any path under it. Do NOT run vault archiving or topic-linking steps. Confine all file changes to the working directory named in your ticket. Your final message IS your report to the dispatcher.'
+# Grok auto-discovers the user's Claude world (CLAUDE.md, skills, agents, MCP
+# servers, hooks) by default. The GROK_CLAUDE_*_ENABLED=false cells the
+# launcher puts in the child's environment (see the spawn line below) switch
+# that discovery OFF at the source (05-configuration.md 'Harness compatibility'; verified 2026-08-18:
+# MCP servers no longer load, 209->103 commands, ~9K fewer input tokens per
+# call). --rules and the deny rules below remain as defense in depth. Note: a
+# generic top-level CLAUDE.md in the *working directory* stays recognized
+# (documented) — that is project context and acceptable.
+WORKER_RULES='You are a dispatched worker in a headless, non-interactive run. Do NOT write any session log. Do NOT write to the user'"'"'s notes vault or to any path outside the working directory named in your ticket. Do NOT run vault archiving or topic-linking steps. Confine all file changes to the working directory named in your ticket. Your final message IS your report to the dispatcher.'
 
 # Hard rail 1 machine-enforced: workers never spawn workers.
 #
-# Boundary honesty: the OS sandbox is the real write boundary. `workspace`
-# confines writes to CWD + /tmp + ~/.grok at the kernel level, so paths outside
-# it (a notes vault, $HOME dotfiles) are already unreachable whatever the tool
-# layer says. The Write/Edit denies below are defense-in-depth on the tool path
-# only — in `workspace` mode the worker still holds a shell, so a deny glob
-# alone would not stop a redirect. Never present the globs as the boundary.
+# Boundary honesty: the OS sandbox is a WRITE boundary only. `workspace`
+# confines writes to CWD + temp dirs + ~/.grok at the kernel level
+# (18-sandbox.md). It is NOT a read boundary — both profiles read the whole
+# filesystem — and on macOS it is NOT a network boundary: child-process network
+# blocking is Linux-only, a documented no-op on macOS (18-sandbox.md:34). So a
+# `workspace` worker holds a shell, web_fetch/web_search, and global read: it
+# can read and transmit anything the user can. Codex's `workspace-write` blocks
+# network on macOS by default; do not treat the two as equivalent. Site
+# workspace workers only on repos you would let an autonomous agent read your
+# home directory from; prefer read-only + no shell for review. The Write/Edit
+# deny globs below are tool-layer defense-in-depth, never the boundary.
 set -- --disallowed-tools "Agent" \
+       --no-subagents \
        --deny "MCPTool" \
        --rules "$WORKER_RULES" \
        --permission-mode bypassPermissions \
@@ -138,7 +162,7 @@ fi
 
 START=$(date +%s)
 set +e
-"$GROK_BIN" --prompt-file "$TICKET" "$@" > "$OUT" 2> "$OUT.stderr" &
+env GROK_CLAUDE_SKILLS_ENABLED=false GROK_CLAUDE_RULES_ENABLED=false GROK_CLAUDE_AGENTS_ENABLED=false GROK_CLAUDE_MCPS_ENABLED=false GROK_CLAUDE_HOOKS_ENABLED=false "$GROK_BIN" --prompt-file "$TICKET" "$@" > "$OUT" 2> "$OUT.stderr" &
 CPID=$!
 # PID file is the LOST-protocol handle — if it cannot be written, paid work must
 # not continue untracked: kill the child and fail loudly.
@@ -158,6 +182,7 @@ echo "exit code: $CODE"
 echo "duration: $((END - START))s"
 echo "pid file: $OUT.pid (child $CPID, reaped)"
 echo "binary: $GROK_BIN"
+echo "discovery: claude-compat OFF (GROK_CLAUDE_*_ENABLED=false) | subagents: --no-subagents + Agent tool removed"
 echo "sandbox: $SANDBOX | tools: $([ "$SANDBOX" = read-only ] && echo 'read_file,grep,list_dir' || echo default) | Agent: blocked | MCP: denied | schema: ${SCHEMA:-none}"
 
 # Seat provenance + reactive context measurement. modelUsage is BILLED-tier
@@ -182,18 +207,36 @@ else:
 print(f'session id: {d.get("sessionId","(none)")}')
 print(f'stop reason: {d.get("stopReason","(none)")}  turns: {d.get("num_turns","(none)")}')
 u = d.get("usage") or {}
-inp = u.get("input_tokens"); tot = u.get("total_tokens")
-print(f'usage: input={inp} total={tot} cost_usd={d.get("total_cost_usd")}')
-# Reactive context rule (routing.md): the 200K repricing cliff applies to the
-# WHOLE request, so measure what actually happened instead of guessing ahead.
+def _n(key):
+    try:
+        return int(u.get(key) or 0)
+    except (TypeError, ValueError):
+        return 0
+inp = _n("input_tokens")                    # UNCACHED only, SUMMED across model calls
+cr = _n("cache_read_input_tokens")
+cc = _n("cache_creation_input_tokens")
+out = u.get("output_tokens")
+tot = u.get("total_tokens")
 try:
-    if inp is not None and int(inp) > 200000:
-        print("CONTEXT ALERT: input exceeded 200000 — request was repriced at the 2x tier; "
-              "Grok is ineligible for equal-or-larger tickets this run")
-    elif inp is not None and int(inp) > 150000:
-        print("CONTEXT WARN: input above 150000 — approaching the 200000 repricing cliff")
+    turns = int(d.get("num_turns") or 0) or 1
 except (TypeError, ValueError):
-    pass
+    turns = 1
+prompt_total = inp + cr + cc
+prompt_avg = prompt_total // turns
+print(f'usage: uncached_input={inp} cache_read={cr} output={out} total={tot} cost_usd={d.get("total_cost_usd")}')
+print(f'prompt: total={prompt_total} over {turns} model call(s), avg/call={prompt_avg} '
+      '(exact for 1 call; a floor for multi-turn — late calls of a growing session are larger)')
+# Reactive context rule (routing.md, model-matrix.md Table 3): the 200K
+# repricing cliff applies to the WHOLE prompt of EACH model call, so the figure
+# that matters is prompt size per call — not `usage.input_tokens`, which is
+# uncached-only and summed across calls (14-headless-mode.md:168-175).
+# Per-call exactness needs the streaming-json `usage` events (14-headless-mode.md,
+# one per model response); the json envelope only carries sums.
+if prompt_avg > 200000:
+    print("CONTEXT ALERT: average prompt exceeded 200000 per call — every call was repriced at the 2x tier")
+elif prompt_avg > 120000 or (turns == 1 and prompt_total > 150000):
+    print("CONTEXT WARN: prompt size approaching/likely past the 200000 repricing cliff on late calls — "
+          "treat this workstream as at the cliff")
 PYEOF
 fi
 

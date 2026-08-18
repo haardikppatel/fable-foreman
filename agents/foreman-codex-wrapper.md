@@ -24,8 +24,17 @@ agents. Contract:
      tail of the launcher's stderr artifact.
    - Then the launcher's stdout (the transport envelope: exit code, duration,
      pid file, seat evidence) verbatim.
-   - Then the Codex worker's final agent message, extracted read-only from the
-     JSONL artifact the launcher wrote, complete and verbatim — no summarizing,
-     no commentary, no interpretation.
+   - Then the Codex worker's final message, produced by running exactly this
+     read-only command and relaying its stdout verbatim (it prints the `text`
+     of the last agent-message `item.completed` event in the JSONL stream):
+
+     ```bash
+     python3 -c 'import json,sys;E=[json.loads(l) for l in open(sys.argv[1],encoding="utf-8",errors="replace") if l.strip().startswith("{")];M=[e["item"].get("text") for e in E if isinstance(e,dict) and e.get("type")=="item.completed" and isinstance(e.get("item"),dict) and "agent" in str(e["item"].get("item_type") or e["item"].get("type") or "") and e["item"].get("text")];print(M[-1] if M else "RELAY FAILED: no agent-message item.completed event in artifact")' <artifact-jsonl>
+     ```
+
+     Never retype, summarize, or reconstruct it; if the command fails, relay
+     its error and say `RELAY FAILED`.
 3. Write nothing except what the launcher itself writes. Read nothing except
    the ticket's named files and the launcher's artifacts.
+4. Your relay is transport metadata. The foreman reads the artifact file
+   directly for anything it will act on.

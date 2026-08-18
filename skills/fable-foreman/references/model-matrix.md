@@ -10,13 +10,17 @@ LEAD seat) these prices are **not** card charges. They are the best available
 literal only on API-key auth. Never quote them to the user as money spent without
 first establishing the auth mode (codex-workers.md, grok-workers.md).
 
-**List prices are an UPPER BOUND, not the bill.** Measured on this account
-2026-08-17: a real 6-turn Grok 4.6 review moving 370K input tokens and 18K output
-reported **$0.0714** in its own envelope — roughly **3.5x below** what the list
-prices in Table 1 predict. Session/subscription rates evidently sit well under
-public API list. Where an envelope reports actual usage and cost, **that number
-wins over this table**; the tables are for choosing between seats, not for
-telling the user what they spent.
+**On this subscription the envelope reports a flat pool rate, not the API list.**
+Measured 2026-08-17/18: eleven Grok dispatches (1–14 turns) all fit *exactly*
+$0.34 input / $0.085 cache-read / $1.02 output per M — 0.17x the public list on
+every bucket (5.9x below list-with-cache; an earlier draft said 3.5x, which
+priced only cache-read+output and dropped the uncached tokens). Grok's docs say
+`total_cost_usd` appears only when the server reports a complete cost, so this is
+xAI's own accounting for OAuth/pool traffic (14-headless-mode.md:184). Read it as
+a fixed internal rate — not as evidence about what the subscription *allowance*
+costs, and there is no comparable measurement for Claude or Codex subscriptions.
+Where an envelope reports a cost, record that number; use Table 1 only to compare
+seats.
 
 **Currency rule applies to this whole file.** Every number below is dated. Model
 lineups move faster than skill files. If anything here disagrees with the live
@@ -47,7 +51,7 @@ A 4-turn agentic dispatch: ~100K working context sent fresh once, ~300K re-sent
 from cache across later turns, 12K output. This shape matters more than list
 price, because caching dominates multi-turn work.
 
-| Seat | Cost | Index | Capability per dollar |
+| Seat | Cost (no cache-write premium) | Index | Capability per dollar |
 |---|---|---|---|
 | gpt-5.6-luna | **$0.040** | 52 | **1287** |
 | Claude Haiku 4.5 | $0.190 | 30 | 158 |
@@ -58,6 +62,17 @@ price, because caching dominates multi-turn work.
 | Claude Opus 5 | $0.950 | 63 | 66 |
 | gpt-5.6-sol | $1.010 | 61 | 60 |
 | Claude Fable 5 | $1.900 | 62 | 33 |
+
+Anthropic charges 1.25x base input on the first (cache-write) pass — verified on
+the pricing page 2026-08-18 (2x for 1-hour TTL); Grok's envelopes report zero
+cache-creation tokens (no write charge observed); OpenAI's write policy was
+recorded by research as 1.25x but not primary-verified. With the Anthropic
+premium applied to the 100K fresh pass: Haiku $0.215, Sonnet $0.430, Opus
+$1.075, Fable $2.150 — Grok 4.6 ($0.422) then edges Sonnet rather than "landing
+level"; no other conclusion changes. Cross-vendor per-token comparisons also
+ignore tokenizer differences (Anthropic's 4.7+ tokenizer yields ~30% more tokens
+than its 4.6-era one; vendor-to-vendor counts are not comparable) — treat Table 2
+as ±20%.
 
 Three conclusions that should drive routing:
 
@@ -84,28 +99,35 @@ discontinuously. Same job, 17% more input:
 | Job | Grok 4.6 | Sonnet 5 | Verdict |
 |---|---|---|---|
 | 180K in / 15K out | **$0.450** | $0.510 | Grok wins |
-| 210K in / 15K out | $1.020 | **$0.570** | Sonnet 79% cheaper |
-| 250K in / 15K out | $1.180 | **$0.650** | Sonnet 82% cheaper |
-| 400K in / 20K out | $1.840 | **$1.000** | Sonnet 84% cheaper |
+| 210K in / 15K out | $1.020 | **$0.570** | Sonnet 44% cheaper (Grok costs 1.79x) |
+| 250K in / 15K out | $1.180 | **$0.650** | Sonnet 45% cheaper (1.82x) |
+| 400K in / 20K out | $1.840 | **$1.000** | Sonnet 46% cheaper (1.84x) |
 
 **Rule: above ~200K, Grok loses its own cost advantage — change seats.** What is
 certain is the *within-Grok* jump: xAI's published policy reprices the whole
 request 2x, so the same job costs twice what it would have. What is **not**
 established is the cross-provider winner: the table above is list-price math, and
-this account's measured Grok billing ran ~3.5x below list (see the upper-bound
-note) with no matching subscription measurement for Claude. So treat "Sonnet is
+this account's envelopes report a flat 0.17x-of-list pool rate (see the note
+above) with no matching subscription measurement for Claude. So treat "Sonnet is
 cheaper above the cliff" as a **list-price-relative** claim to confirm against
 measured envelope costs, and treat "don't pay Grok's surcharge" as the rule.
 Above 500K Grok is ineligible outright — that is a hard context ceiling, not a
 price argument.
 
-**How to apply this without counting tokens.** A foreman cannot reliably estimate
-request size ahead of a dispatch, and Grok silently prepends discovered config to
-every call, so an *ex-ante* estimate is unfalsifiable. Measure instead:
-`grok-dispatch.sh` prints `usage: input=… total=…` from the envelope on every
-call, and emits `CONTEXT WARN` above 150K and `CONTEXT ALERT` above 200K. Ledger
-that number. **Reactive rule:** once any call in a run crosses 200K, Grok is
-ineligible for equal-or-larger tickets for the rest of that run.
+**How to apply this without counting tokens.** Estimating request size ahead of a
+dispatch is unreliable (Grok prepends its own system prompt and toolset — ~19K
+tokens on this build with Claude-config discovery off, ~28K with it on), so
+measure after the fact instead. The json envelope reports summed *uncached* input
+separately from cache reads, so `grok-dispatch.sh` derives the **average prompt
+size per model call** (uncached + cache-read + cache-creation, divided by
+`num_turns`) rather than reading `input_tokens` raw, and emits `CONTEXT WARN` /
+`CONTEXT ALERT` off that. Ledger the number. **Reactive rule:** the launcher
+reports the dispatch's average prompt size per model call. After a
+`CONTEXT ALERT`, do not send Grok another ticket that carries the *same context
+set or a superset* (same working files/paths plus the same or a longer resumed
+session) — that is a fact the foreman knows from what it put in the ticket. A
+fresh ticket with a smaller context set may still use Grok; when unsure, don't. A
+`CONTEXT WARN` means shrink the next ticket's context or split it.
 
 ## Table 4 — Effort: a volume dial, and it pays off unevenly
 
@@ -191,10 +213,10 @@ task, go up a tier or stop — never take the cheap row because it is cheap.
 
 | Task | Class | First choice | Then | Never |
 |---|---|---|---|---|
-| Architecture, ambiguous debugging, final judgment | FRONTIER | LEAD (Opus 5) | frontier subagent | Grok, luna, Haiku |
-| Accepting verdict on a change (blind verifier) | FRONTIER | **Claude verifier**; a **Codex read-only reviewer** is the sanctioned cross-family verifier (verification.md) | — | **Grok** — its seat evidence is billed-tier, and a Grok reviewer never leads with a verdict (grok-workers.md) |
-| Adversarial review / second opinion | FRONTIER-advisory | **Grok 4.6 @ high** | Codex sol | — |
-| Well-specified implementation, tests, refactors | WORKHORSE | **Grok 4.6 @ high** (<200K) when cost dominates; **sol** when agentic-execution reliability dominates — the only measured head-to-head shows Grok trailing *sol* on DeepSWE and Terminal-Bench (Table 4b). No comparable execution measurement exists for Sonnet 5, whose only cross-model number here is the composite index (where Grok leads 61 to 55) — so do not pick Sonnet over Grok on reliability grounds this table cannot support. | Sonnet 5 / terra on pool grounds | — |
+| Architecture, ambiguous debugging, final judgment | FRONTIER | LEAD (whichever frontier-class model holds the session) | frontier subagent | Grok, luna, Haiku |
+| Accepting verdict on a change (blind verifier) | FRONTIER | **Claude verifier** — always the acceptor. A **Codex read-only reviewer** is the strongest available cross-family *second opinion* (verification.md), never the acceptor | — | **Grok**, and any off-family seat *as acceptor* — Grok's seat evidence is billed-tier and a Grok reviewer never leads with a verdict (grok-workers.md) |
+| Adversarial review / second opinion | FRONTIER-advisory | **Grok 4.6 @ medium** (Table 4: review curves are flat; escalate to `high` only when the review is itself long-horizon) | Codex sol | — |
+| Well-specified implementation, tests, refactors | WORKHORSE | **Grok 4.6 @ high** (<200K) when cost dominates; **terra** (Codex mid tier — the class table's Codex WORKHORSE seat) otherwise; step up to **sol** only when agentic-execution reliability dominates (First Law: unsure → one tier up) — the only measured head-to-head shows Grok trailing *sol* on DeepSWE and Terminal-Bench (Table 4b). No comparable execution measurement exists for Sonnet 5, whose only cross-model number here is the composite index (where Grok leads 61 to 55) — so do not pick Sonnet over Grok on reliability grounds this table cannot support. | Sonnet 5 / terra on pool grounds | — |
 | Large-context implementation (>200K) | WORKHORSE | **Sonnet 5** | terra | **Grok (cliff)**, Haiku (200K cap) |
 | Mechanical edits, extraction, scanning | FAST | **gpt-5.6-luna @ low** | Haiku 4.5 | frontier seats |
 | Repo-wide sweep (>500K) | any | Claude or Codex (1M ctx) | — | **Grok (500K ceiling)** |

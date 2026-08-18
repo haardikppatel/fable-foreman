@@ -29,12 +29,27 @@ else
   echo "codex: NOT installed"
 fi
 
+# Codex consent posture. The default is the consent rule; a user may opt out of
+# the per-session ask on THIS machine only, by creating ~/.foreman/codex-preapproved
+# or exporting FOREMAN_CODEX_PREAPPROVED=1. No credential values are read or printed.
+if [ "${FOREMAN_CODEX_PREAPPROVED:-}" = "1" ] || [ -f "${FOREMAN_HOME:-$HOME/.foreman}/codex-preapproved" ]; then
+  echo "codex billing: PRE-APPROVED (user config) — consent ask skipped, budget step-down does not apply to Codex"
+else
+  echo "codex billing: consent rule applies — confirm with the user before the first billable Codex call (unless they asked for Codex this session)"
+fi
+
 # Grok CLI (xAI). Binary is normally at $HOME/.grok/bin/grok and may or may
 # not also be on PATH; $GROK_HOME (default ~/.grok) governs where its config
 # lives, so honor it for the binary fallback too.
 GROK_HOME_DIR="${GROK_HOME:-$HOME/.grok}"
-if [ -n "${GROK_BIN:-}" ] && [ -x "${GROK_BIN:-}" ]; then
-  : # explicit override — grok-dispatch.sh honors the same variable first
+GROK_BIN_BAD=""
+if [ -n "${GROK_BIN:-}" ]; then
+  # Explicit override — grok-dispatch.sh honors the same variable first and, like
+  # this probe, refuses rather than falling through to PATH when it is unusable.
+  if [ ! -x "$GROK_BIN" ]; then
+    GROK_BIN_BAD="$GROK_BIN"
+    GROK_BIN=""
+  fi
 elif command -v grok >/dev/null 2>&1; then
   GROK_BIN=$(command -v grok)
 elif [ -x "$GROK_HOME_DIR/bin/grok" ]; then
@@ -43,7 +58,9 @@ else
   GROK_BIN=""
 fi
 
-if [ -n "$GROK_BIN" ]; then
+if [ -n "$GROK_BIN_BAD" ]; then
+  echo "grok: GROK_BIN is set but not executable ($GROK_BIN_BAD) — the launcher will refuse (exit 69); unset it or fix it"
+elif [ -n "$GROK_BIN" ]; then
   echo "grok: installed ($GROK_BIN)"
   GROK_VERSION=$("$GROK_BIN" --version 2>&1) || GROK_VERSION="UNKNOWN (version command failed)"
   echo "grok version: $GROK_VERSION"

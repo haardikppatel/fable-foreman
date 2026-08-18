@@ -155,7 +155,10 @@ plan: two consecutive failed fix waves on the same findings list → stop and re
 - **an ask that was advisory in the first place.** If the user requested a review,
   an audit, an opinion, or a plan, the deliverable is findings. Self-correction
   applies to work the foreman was told to *produce*, never as licence to start
-  implementing off the back of a review the user asked for. Report and ask.
+  implementing off the back of a review the user asked for. Report and ask. If the
+  user asked for both — 'build X, then review it' — the build is produce-work:
+  confirmed findings against it enter self-correction, and the review's findings
+  are still reported alongside.
 - a **design, architecture, product, or security-posture choice** — a well-cited
   finding can still be a *judgment call the user owns*, not a settled defect.
 - a **user-visible contract change** (API shape, output format, defaults, schema).
@@ -184,7 +187,7 @@ BASELINE: <commit hash> | <git status --porcelain summary> | <date>
               task | attempt # | seat + effort | ticket rev | outcome
               (status/verdict/LOST + failure class) | checks run + results |
               evidence/artifact paths | timestamp>
-## Decisions  <choices + why; seat changes; degradations; Codex billing mode noted>
+## Decisions  <choices + why; seat changes; degradations; consent grants>
 ## Scratch    <artifact paths>
 ```
 

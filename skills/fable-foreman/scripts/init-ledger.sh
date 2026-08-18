@@ -49,6 +49,12 @@ TMP=$(mktemp "$DIR/.ledger-tmp.XXXXXX")
 if ln "$TMP" "$LEDGER" 2>/dev/null; then
   rm -f "$TMP"
   echo "CREATED: $LEDGER (baseline: $HASH, $DIRTY dirty files)"
+  # The ledger lives in the project being worked on. If it is not ignored there,
+  # the verifier's clean-tree check can never pass (verification.md).
+  if git rev-parse --git-dir >/dev/null 2>&1; then
+    git check-ignore -q "$DIR" 2>/dev/null \
+      || echo "NOTE: $DIR is not gitignored — add '$DIR/' to .gitignore or .git/info/exclude so the verifier's clean-tree check stays meaningful (delegation.md)"
+  fi
 elif [ -e "$LEDGER" ]; then
   rm -f "$TMP"
   echo "EXISTS (created concurrently): $LEDGER — reconcile, do not overwrite."

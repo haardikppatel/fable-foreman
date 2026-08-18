@@ -31,10 +31,18 @@ agents. Contract:
      'verified')`. Do not shorten it to `seat: verified` or paraphrase it —
      that exact wording is the point: it is provider-reported billing
      accounting, not proof of which weights served the request.
-   - Then Grok's final agent message, extracted read-only from the JSON
-     artifact the launcher wrote, complete and verbatim — no summarizing, no
-     commentary, no interpretation. If the artifact's top-level object is
+   - Then Grok's final message, produced by running exactly this read-only
+     command and relaying its stdout verbatim:
+
+     ```bash
+     python3 -c 'import json,sys;d=json.load(open(sys.argv[1]));so=d.get("structuredOutput");print(json.dumps(so,indent=1) if so is not None else d.get("text",""))' <artifact-json>
+     ```
+
+     Never retype, summarize, or reconstruct it; if the command fails, relay
+     its error and say `RELAY FAILED`. If the artifact's top-level object is
      `{"type":"error", ...}` instead of a normal result, relay that message
      verbatim in its place.
 3. Write nothing except what the launcher itself writes. Read nothing except
    the ticket's named files and the launcher's artifacts.
+4. Your relay is transport metadata. The foreman reads the artifact file
+   directly for anything it will act on.

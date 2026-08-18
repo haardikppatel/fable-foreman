@@ -34,6 +34,11 @@ plan was cut back accordingly.
   provider accounting like Grok's `modelUsage`. It never makes a seat `verified`.
 - Grok detection in `scripts/probe.sh` (presence, version, auth mode, cached
   model ids — no billable call, no credential values printed).
+- **Opt-in Codex standing pre-approval** — a machine-local flag
+  (`~/.foreman/codex-preapproved` or `FOREMAN_CODEX_PREAPPROVED=1`), reported by
+  `scripts/probe.sh`, lets a user skip the per-session Codex consent ask and
+  exempt Codex from budget step-down. The published default is unchanged: the
+  consent rule applies.
 
 - **Route to what is actually there** (SKILL.md) — mode (harness capabilities) and
   provider pool are now two independent axes instead of an enumerated combination
@@ -48,6 +53,23 @@ plan was cut back accordingly.
   allowance the foreman itself runs on.
 - Effort guidance is now task-shape aware: analysis/review curves are nearly flat
   (prefer `medium`), long-horizon coding is steep (prefer `high`).
+- Grok launcher switches Claude-config discovery off at the source
+  (`GROK_CLAUDE_*_ENABLED=false`) and passes `--no-subagents`.
+- Launcher measures average prompt size per model call (the json envelope sums
+  uncached input across turns); the reactive 200K rule is reworded to a decidable
+  context-set rule.
+- Wrapper relay is treated as a claim — pinned read-only extraction commands in
+  both wrapper contracts; the foreman reads artifacts directly.
+- Isolation documented honestly for macOS: no child-network block, whole-disk
+  reads, writes-only confinement; Grok `workspace` is weaker than Codex
+  `workspace-write`.
+- Table 3 percentages corrected (Sonnet 44/45/46% cheaper, not 79/82/84%); the
+  cost note corrected to the observed flat 0.17x-of-list pool rate; Table 2 notes
+  the Anthropic cache-write premium.
+- Launcher absolutizes paths and guards arity; `codex-dispatch.sh`'s evidence
+  scanner initializes `candidate` (it raised NameError on every real stream).
+- One acceptor stated consistently everywhere: the accepting verdict is always
+  the Claude verifier; a Codex read-only reviewer is a second opinion.
 
 ### Deliberately NOT changed
 - **The First Law is untouched.** An earlier draft would have made it
@@ -55,7 +77,6 @@ plan was cut back accordingly.
   review called that institutionalizing a past failure, and it was dropped.
 - **Grok cannot hold a verifier verdict.** Its seat evidence is billed-tier, not
   served-tier, so it is an advisory reviewer and second opinion only.
-- The Codex budget-discipline exemption remains scoped to Codex alone.
 
 ## 0.3.0 — 2026-08-07
 
@@ -93,13 +114,6 @@ fixed or explicitly disclosed), and live-tested head-to-head against v0.2.0.
 - **Silent-fallback hazard** documentation (`references/routing.md`) with
   current-build empirical results: what silently substitutes, what fails
   loudly, and the countermeasures.
-
-- **Route to what is actually there** (SKILL.md) — mode (harness capabilities) and
-  provider pool are now two independent axes instead of an enumerated combination
-  table. Any subset works: Claude-only, Claude+Codex, Claude+Grok, or all three.
-  Absence is a routing input, never a blocker, and the foreman never asks the user
-  to install a provider mid-run. Includes the case where mode and pool intersect to
-  leave no legal acceptor — handled by a disclosed reduced-assurance rule, not a stall.
 
 ### Changed
 - Hard rails: added rail 5 (seat provenance) and a tightly-scoped transport
